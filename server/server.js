@@ -11,9 +11,7 @@ import eventsRoutes from "./routes/Events.js";
 import revenueRoutes from "./routes/Revenue.js";
 import usersRoutes from "./routes/Users.js";
 import sequelize from "./config/db.js";
-import User from "./models/User.js";
-import Event from "./models/Event.js";
-import Ticket from "./models/Tickets.js";
+import { User, Event, Ticket, } from "./models/indexing.js";
 
 /*CONFIG*/
 dotenv.config();
@@ -34,12 +32,15 @@ app.use("/Attendence",attendenceRoutes);
 app.use("/Revenue",revenueRoutes);
 app.use("/Users",usersRoutes);
 
+
+
 sequelize.authenticate().then(() => console.log("MySQL Connected ✓")).catch((err)=>console.log("DB Connection Error:", err));
-sequelize.sync({alter:true}).then(()=>console.log("Tables synced ✓")).catch((err) => console.log("Sync Error:", err));
+await sequelize.sync({ force: false }).then(()=>console.log("Tables synced ✓")).catch((err) => console.log("Sync Error:", err));
 
 
 
 const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

@@ -10,7 +10,7 @@ const sequelize = new Sequelize(
     {
     host : process.env.DB_HOST,    
     dialect: "mysql",       // tells sequelize we're using MySQL
-    logging: true,
+    logging: false,
     }
 
 );
