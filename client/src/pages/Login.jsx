@@ -16,7 +16,7 @@ export default function Login() {
     e.preventDefault();
     setError(""); setLoading(true);
     try {
-      const res = await API.post("/Users/login", { email, password });
+      const res = await API.post("/users/login", { email, password });
       login(res.data.user, res.data.token);
       navigate(res.data.user.role === "admin" ? "/dashboard" : "/dashboard");
     } catch (err) {

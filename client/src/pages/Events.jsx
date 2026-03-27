@@ -49,7 +49,7 @@ export default function Events() {
 
   const fetchEvents = () => {
     setLoading(true);
-    API.get("/Events").then(res => setEvents(res.data)).catch(() => setError("Failed to load events")).finally(() => setLoading(false));
+    API.get("/events").then(res => setEvents(res.data)).catch(() => setError("Failed to load events")).finally(() => setLoading(false));
   };
   useEffect(() => { fetchEvents(); }, []);
 
@@ -67,7 +67,7 @@ export default function Events() {
   const handleEditSubmit = async (e) => {
     e.preventDefault(); setEditLoading(true); setEditError("");
     try {
-      await API.put(`/Events/update/${editEvent.id}`, editForm);
+      await API.put(`/events/update/${editEvent.id}`, editForm);
       setEditEvent(null); fetchEvents();
     } catch (err) { setEditError(err.response?.data?.message || "Failed to update event"); }
     finally { setEditLoading(false); }
@@ -76,14 +76,14 @@ export default function Events() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await API.post("/Events/create-event", form);
+      await API.post("/events/create-event", form);
       setShowForm(false); setForm(emptyForm); fetchEvents();
     } catch (err) { setError(err.response?.data?.message || "Failed to create event"); }
   };
 
   const handleDelete = async (id) => {
     if (!confirm("Delete this event?")) return;
-    try { await API.delete(`/Events/delete/${id}`); fetchEvents(); }
+    try { await API.delete(`/events/delete/${id}`); fetchEvents(); }
     catch { setError("Failed to delete event"); }
   };
 
