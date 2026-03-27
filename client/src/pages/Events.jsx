@@ -3,369 +3,281 @@ import Sidebar from "../components/Sidebar";
 import Navbar  from "../components/Navbar";
 import API     from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import { Btn, Modal, Input, Select } from "../components/UI.jsx";
 
 const emptyForm = {
   name: "", location: "", date: "", description: "",
   capacity: "", status: "upcoming", ticketPrice: ""
 };
 
+const statusStyle = {
+  upcoming: { bg: "rgba(37,99,235,0.15)",  border: "rgba(37,99,235,0.3)",  color: "#60a5fa"  },
+  live:     { bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.3)", color: "#34d399"  },
+  selling:  { bg: "rgba(245,158,11,0.15)", border: "rgba(245,158,11,0.3)", color: "#fbbf24"  },
+  closed:   { bg: "rgba(100,116,139,0.15)",border: "rgba(100,116,139,0.3)",color: "#94a3b8"  },
+};
+
+const FieldGroup = ({ label, children }) => (
+  <div>
+    <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--muted)", letterSpacing: "1px", marginBottom: "8px" }}>{label}</label>
+    {children}
+  </div>
+);
+
+const inputStyle = {
+  width: "100%", padding: "11px 14px",
+  background: "var(--surface2)", border: "1px solid var(--border)",
+  borderRadius: "8px", color: "var(--text)",
+  fontSize: "13px", fontFamily: "'DM Sans', sans-serif",
+  outline: "none", transition: "border-color 0.15s, box-shadow 0.15s",
+  boxSizing: "border-box",
+};
+
 export default function Events() {
   const { user } = useAuth();
-  const isAdmin   = user?.role === "admin";
+  const isAdmin  = user?.role === "admin";
 
   const [events,   setEvents]   = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form,     setForm]     = useState(emptyForm);
-
-  // Edit modal state
-  const [editEvent,   setEditEvent]   = useState(null);
-  const [editForm,    setEditForm]    = useState(emptyForm);
-  const [editLoading, setEditLoading] = useState(false);
-  const [editError,   setEditError]   = useState("");
+  const [editEvent,    setEditEvent]    = useState(null);
+  const [editForm,     setEditForm]     = useState(emptyForm);
+  const [editLoading,  setEditLoading]  = useState(false);
+  const [editError,    setEditError]    = useState("");
 
   const fetchEvents = () => {
     setLoading(true);
-    API.get("/Events")
-      .then(res => setEvents(res.data))
-      .catch(() => setError("Failed to load events"))
-      .finally(() => setLoading(false));
+    API.get("/Events").then(res => setEvents(res.data)).catch(() => setError("Failed to load events")).finally(() => setLoading(false));
   };
-
   useEffect(() => { fetchEvents(); }, []);
 
-  // Open edit modal and prefill form
   const openEdit = (ev) => {
-    setEditEvent(ev);
-    setEditError("");
+    setEditEvent(ev); setEditError("");
     setEditForm({
-      name:        ev.name        || "",
-      location:    ev.location    || "",
-      date:        ev.date ? ev.date.split("T")[0] : "",
+      name: ev.name || "", location: ev.location || "",
+      date: ev.date ? ev.date.split("T")[0] : "",
       description: ev.description || "",
-      capacity:    ev.capacity    || "",
-      status:      ev.status      || "upcoming",
+      capacity: ev.capacity || "", status: ev.status || "upcoming",
       ticketPrice: ev.ticketPrice || "",
     });
   };
 
-  const closeEdit = () => {
-    setEditEvent(null);
-    setEditError("");
-  };
-
   const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    setEditLoading(true);
-    setEditError("");
+    e.preventDefault(); setEditLoading(true); setEditError("");
     try {
       await API.put(`/Events/update/${editEvent.id}`, editForm);
-      closeEdit();
-      fetchEvents();
-    } catch (err) {
-      setEditError(err.response?.data?.message || "Failed to update event");
-    } finally {
-      setEditLoading(false);
-    }
+      setEditEvent(null); fetchEvents();
+    } catch (err) { setEditError(err.response?.data?.message || "Failed to update event"); }
+    finally { setEditLoading(false); }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       await API.post("/Events/create-event", form);
-      setShowForm(false);
-      setForm(emptyForm);
-      fetchEvents();
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to create event");
-    }
+      setShowForm(false); setForm(emptyForm); fetchEvents();
+    } catch (err) { setError(err.response?.data?.message || "Failed to create event"); }
   };
 
   const handleDelete = async (id) => {
     if (!confirm("Delete this event?")) return;
-    try {
-      await API.delete(`/Events/delete/${id}`);
-      fetchEvents();
-    } catch {
-      setError("Failed to delete event");
-    }
+    try { await API.delete(`/Events/delete/${id}`); fetchEvents(); }
+    catch { setError("Failed to delete event"); }
   };
 
-  const statusColor = {
-    upcoming: "bg-blue-100 text-blue-700",
-    live:     "bg-green-100 text-green-700",
-    selling:  "bg-yellow-100 text-yellow-700",
-    closed:   "bg-red-100 text-red-700",
+  const StyledInput = ({ value, onChange, type = "text", required, placeholder, rows }) => {
+    const [focused, setFocused] = useState(false);
+    const style = { ...inputStyle, borderColor: focused ? "#2563eb" : "var(--border)", boxShadow: focused ? "0 0 0 3px rgba(37,99,235,0.1)" : "none" };
+    if (rows) return (
+      <textarea value={value} onChange={onChange} rows={rows} style={{ ...style, resize: "vertical" }}
+        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+    );
+    return (
+      <input type={type} required={required} value={value} onChange={onChange} placeholder={placeholder}
+        style={style} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+    );
   };
 
-  const inputClass = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+  const FormGrid = ({ formData, setFormData, onSubmit, loading: subLoading, error: subError, onCancel, submitLabel }) => (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+      {subError && (
+        <div style={{ gridColumn: "1/-1", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: "12px 16px", borderRadius: "8px", fontSize: "13px" }}>
+          {subError}
+        </div>
+      )}
+      {[
+        { label: "Event Name",    key: "name",        type: "text",   required: true },
+        { label: "Location",      key: "location",    type: "text",   required: true },
+        { label: "Date",          key: "date",        type: "date",   required: true },
+        { label: "Capacity",      key: "capacity",    type: "number", required: true },
+        { label: "Ticket Price",  key: "ticketPrice", type: "number", required: true },
+      ].map(({ label, key, type, required }) => (
+        <FieldGroup key={key} label={label}>
+          <StyledInput type={type} required={required} value={formData[key]} onChange={e => setFormData({ ...formData, [key]: e.target.value })} />
+        </FieldGroup>
+      ))}
+      <FieldGroup label="Status">
+        <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} style={inputStyle}>
+          {["upcoming","live","selling","closed"].map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </FieldGroup>
+      <div style={{ gridColumn: "1/-1" }}>
+        <FieldGroup label="Description">
+          <StyledInput value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} rows={3} />
+        </FieldGroup>
+      </div>
+      <div style={{ gridColumn: "1/-1", display: "flex", justifyContent: "flex-end", gap: "10px", paddingTop: "8px", borderTop: "1px solid var(--border)" }}>
+        <Btn variant="ghost" onClick={onCancel}>Cancel</Btn>
+        <Btn onClick={onSubmit} disabled={subLoading}>{subLoading ? "Saving..." : submitLabel}</Btn>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
       <Sidebar />
-      <div className="flex-1 flex flex-col">
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <Navbar title="Events" />
-        <main className="flex-1 p-6">
+        <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
 
           {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <p className="text-sm text-gray-500">{events.length} events found</p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+            <div>
+              <p style={{ fontSize: "11px", color: "var(--muted)", letterSpacing: "1.5px", fontWeight: 600 }}>TOTAL</p>
+              <p style={{ fontSize: "24px", fontWeight: 700, fontFamily: "'Sora', sans-serif", color: "var(--text)" }}>
+                {events.length} <span style={{ fontSize: "14px", color: "var(--muted)", fontFamily: "'DM Sans'" }}>events</span>
+              </p>
+            </div>
             {isAdmin && (
-              <button
-                onClick={() => setShowForm(!showForm)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
-              >
-                {showForm ? "Cancel" : "+ New Event"}
-              </button>
+              <Btn onClick={() => setShowForm(!showForm)} variant={showForm ? "ghost" : "primary"}>
+                {showForm ? "✕ Cancel" : "+ New Event"}
+              </Btn>
             )}
           </div>
 
           {/* Create Form */}
           {showForm && isAdmin && (
-            <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 shadow-sm mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <h3 className="sm:col-span-2 text-base font-semibold text-gray-700">Create New Event</h3>
-              {[
-                { label:"Name",         key:"name",        type:"text"           },
-                { label:"Location",     key:"location",    type:"text"           },
-                { label:"Date",         key:"date",        type:"date"           },
-                { label:"Capacity",     key:"capacity",    type:"number"         },
-                { label:"Ticket Price", key:"ticketPrice", type:"number"         },
-              ].map(({ label, key, type }) => (
-                <div key={key}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-                  <input
-                    type={type} required
-                    value={form[key]}
-                    onChange={e => setForm({ ...form, [key]: e.target.value })}
-                    className={inputClass}
-                  />
-                </div>
-              ))}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  value={form.status}
-                  onChange={e => setForm({ ...form, status: e.target.value })}
-                  className={inputClass}
-                >
-                  {["upcoming","live","selling","closed"].map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  value={form.description}
-                  onChange={e => setForm({ ...form, description: e.target.value })}
-                  className={inputClass}
-                  rows={3}
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700">
-                  Create Event
-                </button>
-              </div>
-            </form>
+            <div className="animate-fade-up" style={{
+              background: "var(--surface)", border: "1px solid var(--border)",
+              borderRadius: "16px", padding: "24px 28px", marginBottom: "24px",
+            }}>
+              <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text)", marginBottom: "20px", fontFamily: "'Sora', sans-serif" }}>Create New Event</p>
+              <FormGrid
+                formData={form} setFormData={setForm}
+                onSubmit={handleSubmit} error={error}
+                onCancel={() => { setShowForm(false); setForm(emptyForm); }}
+                submitLabel="Create Event"
+              />
+            </div>
           )}
 
-          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+          {error && !showForm && (
+            <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: "12px 16px", borderRadius: "10px", fontSize: "13px", marginBottom: "16px" }}>
+              {error}
+            </div>
+          )}
 
-          {/* Events Table */}
-          {loading ? <p className="text-gray-500">Loading...</p> : (
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
-                  <tr>
-                    <th className="px-4 py-3 text-left">Name</th>
-                    <th className="px-4 py-3 text-left">Location</th>
-                    <th className="px-4 py-3 text-left">Date</th>
-                    <th className="px-4 py-3 text-left">Capacity</th>
-                    <th className="px-4 py-3 text-left">Attendees</th>
-                    <th className="px-4 py-3 text-left">Fill Rate</th>
-                    <th className="px-4 py-3 text-left">Status</th>
-                    <th className="px-4 py-3 text-left">General</th>
-                    <th className="px-4 py-3 text-left">VIP</th>
-                    {isAdmin && <th className="px-4 py-3 text-left">Revenue</th>}
-                    {isAdmin && <th className="px-4 py-3 text-left">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {events.map(ev => (
-                    <tr key={ev.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-800">{ev.name}</td>
-                      <td className="px-4 py-3 text-gray-500">{ev.location}</td>
-                      <td className="px-4 py-3 text-gray-500">{new Date(ev.date).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-gray-500">{ev.capacity}</td>
-                      <td className="px-4 py-3 text-gray-500">{ev.attendees}</td>
-                      <td className="px-4 py-3 text-gray-500">
-                        {ev.capacity > 0
-                          ? ((ev.attendees / ev.capacity) * 100).toFixed(1) + "%"
-                          : "0%"
-                        }
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor[ev.status]}`}>
-                          {ev.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500">${parseFloat(ev.ticketPrice).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-purple-600 font-medium">${(parseFloat(ev.ticketPrice) * 2).toFixed(2)}</td>
-                      {isAdmin && (
-                        <td className="px-4 py-3 text-green-600 font-medium">
-                          ${(ev.attendees * parseFloat(ev.ticketPrice)).toFixed(2)}
-                        </td>
-                      )}
-                      {isAdmin && (
-                        <td className="px-4 py-3">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => openEdit(ev)}
-                              className="text-blue-500 hover:text-blue-700 text-xs font-medium"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(ev.id)}
-                              className="text-red-500 hover:text-red-700 text-xs font-medium"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      )}
+          {/* Table */}
+          {loading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {[...Array(5)].map((_, i) => <div key={i} className="skeleton" style={{ height: "52px", borderRadius: "8px" }} />)}
+            </div>
+          ) : (
+            <div className="animate-fade-up" style={{
+              background: "var(--surface)", border: "1px solid var(--border)",
+              borderRadius: "16px", overflow: "hidden",
+            }}>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "900px" }}>
+                  <thead>
+                    <tr style={{ background: "var(--surface2)", borderBottom: "1px solid var(--border)" }}>
+                      {["Name","Location","Date","Capacity","Attendees","Fill Rate","Status","General","VIP",
+                        ...(isAdmin ? ["Revenue","Actions"] : [])
+                      ].map(h => (
+                        <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: "10px", fontWeight: 600, color: "var(--muted)", letterSpacing: "1.5px", fontFamily: "'Sora', sans-serif", whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {events.map((ev, idx) => {
+                      const s = statusStyle[ev.status] || statusStyle.upcoming;
+                      const fillRate = ev.capacity > 0 ? ((ev.attendees / ev.capacity) * 100).toFixed(1) : 0;
+                      const fillColor = fillRate >= 80 ? "#10b981" : fillRate >= 50 ? "#f59e0b" : "var(--muted)";
+                      return (
+                        <tr key={ev.id}
+                          style={{ borderBottom: "1px solid var(--border)", transition: "background 0.1s", animationDelay: `${idx * 0.03}s` }}
+                          className="animate-fade-up"
+                          onMouseEnter={e => e.currentTarget.style.background = "var(--surface2)"}
+                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                          <td style={{ padding: "14px 16px", fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>{ev.name}</td>
+                          <td style={{ padding: "14px 16px", fontSize: "13px", color: "var(--muted)" }}>{ev.location}</td>
+                          <td style={{ padding: "14px 16px", fontSize: "13px", color: "var(--muted)" }}>{new Date(ev.date).toLocaleDateString()}</td>
+                          <td style={{ padding: "14px 16px", fontSize: "13px", color: "var(--muted)" }}>{ev.capacity}</td>
+                          <td style={{ padding: "14px 16px", fontSize: "13px", color: "var(--muted)" }}>{ev.attendees}</td>
+                          <td style={{ padding: "14px 16px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <div style={{ width: "48px", height: "4px", background: "var(--border)", borderRadius: "2px", overflow: "hidden" }}>
+                                <div style={{ width: `${Math.min(fillRate, 100)}%`, height: "100%", background: fillColor, borderRadius: "2px", transition: "width 0.5s" }} />
+                              </div>
+                              <span style={{ fontSize: "12px", color: fillColor, fontWeight: 600 }}>{fillRate}%</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: "14px 16px" }}>
+                            <span style={{ padding: "3px 10px", borderRadius: "20px", fontSize: "10px", fontWeight: 600, letterSpacing: "0.5px", background: s.bg, border: `1px solid ${s.border}`, color: s.color, fontFamily: "'Sora', sans-serif" }}>{ev.status.toUpperCase()}</span>
+                          </td>
+                          <td style={{ padding: "14px 16px", fontSize: "13px", color: "var(--text)", fontWeight: 500 }}>${parseFloat(ev.ticketPrice).toFixed(2)}</td>
+                          <td style={{ padding: "14px 16px", fontSize: "13px", color: "#a78bfa", fontWeight: 500 }}>${(parseFloat(ev.ticketPrice) * 2).toFixed(2)}</td>
+                          {isAdmin && (
+                            <td style={{ padding: "14px 16px", fontSize: "13px", color: "#10b981", fontWeight: 600 }}>
+                              ${(ev.attendees * parseFloat(ev.ticketPrice)).toFixed(2)}
+                            </td>
+                          )}
+                          {isAdmin && (
+                            <td style={{ padding: "14px 16px" }}>
+                              <div style={{ display: "flex", gap: "8px" }}>
+                                <button onClick={() => openEdit(ev)} style={{ fontSize: "11px", fontWeight: 600, color: "#60a5fa", background: "rgba(37,99,235,0.1)", border: "1px solid rgba(37,99,235,0.2)", padding: "4px 10px", borderRadius: "6px", cursor: "pointer", transition: "all 0.15s" }}
+                                  onMouseEnter={e => e.target.style.background = "rgba(37,99,235,0.2)"}
+                                  onMouseLeave={e => e.target.style.background = "rgba(37,99,235,0.1)"}>Edit</button>
+                                <button onClick={() => handleDelete(ev.id)} style={{ fontSize: "11px", fontWeight: 600, color: "#f87171", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", padding: "4px 10px", borderRadius: "6px", cursor: "pointer", transition: "all 0.15s" }}
+                                  onMouseEnter={e => e.target.style.background = "rgba(239,68,68,0.2)"}
+                                  onMouseLeave={e => e.target.style.background = "rgba(239,68,68,0.1)"}>Delete</button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </main>
       </div>
 
-      {/* ── EDIT MODAL ── */}
+      {/* Edit Modal */}
       {editEvent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-screen overflow-y-auto">
-
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-800">Edit Event</h2>
-              <button
-                onClick={closeEdit}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
-              >
-                ×
-              </button>
+        <div className="animate-fade-in" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div className="animate-fade-up" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "18px", width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.5)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "24px 28px", borderBottom: "1px solid var(--border)" }}>
+              <div>
+                <p style={{ fontSize: "11px", color: "var(--muted)", letterSpacing: "1px", fontWeight: 600 }}>EDITING</p>
+                <h3 style={{ fontFamily: "'Sora', sans-serif", fontSize: "16px", fontWeight: 600, color: "var(--text)", margin: 0 }}>{editEvent.name}</h3>
+              </div>
+              <button onClick={() => setEditEvent(null)} style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--muted)", cursor: "pointer", fontSize: "18px", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
             </div>
-
-            {/* Modal Body */}
-            <form onSubmit={handleEditSubmit} className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-              {editError && (
-                <div className="sm:col-span-2 bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg">
-                  {editError}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Event Name</label>
-                <input
-                  type="text" required
-                  value={editForm.name}
-                  onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <input
-                  type="text" required
-                  value={editForm.location}
-                  onChange={e => setEditForm({ ...editForm, location: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <input
-                  type="date" required
-                  value={editForm.date}
-                  onChange={e => setEditForm({ ...editForm, date: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
-                <input
-                  type="number" required
-                  value={editForm.capacity}
-                  onChange={e => setEditForm({ ...editForm, capacity: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ticket Price ($)</label>
-                <input
-                  type="number" required
-                  value={editForm.ticketPrice}
-                  onChange={e => setEditForm({ ...editForm, ticketPrice: e.target.value })}
-                  className={inputClass}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  value={editForm.status}
-                  onChange={e => setEditForm({ ...editForm, status: e.target.value })}
-                  className={inputClass}
-                >
-                  {["upcoming","live","selling","closed"].map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  value={editForm.description}
-                  onChange={e => setEditForm({ ...editForm, description: e.target.value })}
-                  className={inputClass}
-                  rows={3}
-                />
-              </div>
-
-              {/* Modal Footer */}
-              <div className="sm:col-span-2 flex justify-end gap-3 pt-2 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={closeEdit}
-                  className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={editLoading}
-                  className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {editLoading ? "Saving..." : "Save Changes"}
-                </button>
-              </div>
-
-            </form>
+            <div style={{ padding: "24px 28px" }}>
+              <FormGrid
+                formData={editForm} setFormData={setEditForm}
+                onSubmit={handleEditSubmit} loading={editLoading} error={editError}
+                onCancel={() => setEditEvent(null)} submitLabel="Save Changes"
+              />
+            </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

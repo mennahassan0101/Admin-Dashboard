@@ -2,6 +2,36 @@ import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import Navbar  from "../components/Navbar";
 import API     from "../api/axios";
+import { Btn } from "../components/UI.jsx";
+
+const inputStyle = {
+  width: "100%", padding: "11px 14px",
+  background: "var(--surface2)", border: "1px solid var(--border)",
+  borderRadius: "8px", color: "var(--text)",
+  fontSize: "13px", fontFamily: "'DM Sans', sans-serif",
+  outline: "none", transition: "border-color 0.15s, box-shadow 0.15s",
+  boxSizing: "border-box",
+};
+
+const FieldGroup = ({ label, children }) => (
+  <div>
+    <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--muted)", letterSpacing: "1px", marginBottom: "8px" }}>{label}</label>
+    {children}
+  </div>
+);
+
+const StepDot = ({ num, active, done }) => (
+  <div style={{
+    width: "28px", height: "28px", borderRadius: "50%", flexShrink: 0,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontSize: "11px", fontWeight: 700, transition: "all 0.2s",
+    background: done ? "#10b981" : active ? "#2563eb" : "var(--surface2)",
+    border: `1px solid ${done ? "#10b981" : active ? "#2563eb" : "var(--border)"}`,
+    color: (done || active) ? "white" : "var(--muted)",
+  }}>
+    {done ? "✓" : num}
+  </div>
+);
 
 export default function Users() {
   const [users,    setUsers]    = useState([]);
@@ -9,345 +39,264 @@ export default function Users() {
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [step,     setStep]     = useState(1);  // 1 = user info, 2 = assign events
-  const [newUserId, setNewUserId] = useState(null);
+  const [step,     setStep]     = useState(1);
+  const [newUserId,    setNewUserId]    = useState(null);
   const [selectedEvents, setSelectedEvents] = useState([]);
-  const [form, setForm] = useState({ name:"", email:"", password:"", role:"manager" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "manager" });
+  const [focusedField, setFocusedField] = useState(null);
 
-  const fetchUsers = () => {
-    API.get("/Users/")
-      .then(res => setUsers(res.data))
-      .catch(() => setError("Failed to load users"))
-      .finally(() => setLoading(false));
-  };
+  const fetchUsers  = () => { API.get("/Users/").then(res => setUsers(res.data)).catch(() => setError("Failed to load users")).finally(() => setLoading(false)); };
+  const fetchEvents = () => { API.get("/Events").then(res => setEvents(res.data)).catch(console.error); };
 
-  const fetchEvents = () => {
-    API.get("/Events")
-      .then(res => setEvents(res.data))
-      .catch(console.error);
-  };
-
-  useEffect(() => {
-    fetchUsers();
-    fetchEvents();
-  }, []);
+  useEffect(() => { fetchUsers(); fetchEvents(); }, []);
 
   const resetForm = () => {
-    setForm({ name:"", email:"", password:"", role:"manager" });
-    setSelectedEvents([]);
-    setNewUserId(null);
-    setStep(1);
-    setShowForm(false);
-    setError("");
+    setForm({ name: "", email: "", password: "", role: "manager" });
+    setSelectedEvents([]); setNewUserId(null); setStep(1); setShowForm(false); setError("");
   };
 
-  // Step 1 — Create user
   const handleCreateUser = async (e) => {
-    e.preventDefault();
-    setError("");
+    e.preventDefault(); setError("");
     try {
       const res = await API.post("/Users/add-user", form);
       setNewUserId(res.data.user.id);
-
-      // if role is manager move to step 2 to assign events
-      if (form.role === "manager") {
-        setStep(2);
-      } else {
-        // admin role — no event assignment needed
-        fetchUsers();
-        resetForm();
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to create user");
-    }
+      if (form.role === "manager") setStep(2);
+      else { fetchUsers(); resetForm(); }
+    } catch (err) { setError(err.response?.data?.message || "Failed to create user"); }
   };
 
-  // Step 2 — Assign events to manager
   const handleAssignEvents = async () => {
     setError("");
     try {
-      // assign each selected event
-      await Promise.all(
-        selectedEvents.map(eventId =>
-          API.post(`/Events/${eventId}/assign`, { managerId: newUserId })
-        )
-      );
-      fetchUsers();
-      resetForm();
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to assign events");
-    }
+      await Promise.all(selectedEvents.map(eventId => API.post(`/Events/${eventId}/assign`, { managerId: newUserId })));
+      fetchUsers(); resetForm();
+    } catch (err) { setError(err.response?.data?.message || "Failed to assign events"); }
   };
 
-  const toggleEvent = (id) => {
-    setSelectedEvents(prev =>
-      prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
-    );
-  };
+  const toggleEvent = (id) => setSelectedEvents(prev => prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]);
 
   const handleDelete = async (id) => {
     if (!confirm("Delete this user?")) return;
-    try {
-      await API.delete(`/Users/${id}`);
-      fetchUsers();
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to delete user");
-    }
+    try { await API.delete(`/Users/${id}`); fetchUsers(); }
+    catch (err) { setError(err.response?.data?.message || "Failed to delete user"); }
   };
 
-  const roleColor = {
-    admin:   "bg-red-100 text-red-700",
-    manager: "bg-blue-100 text-blue-700",
-  };
-
-  const inputClass = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+  const getFocusStyle = (field) => ({
+    ...inputStyle,
+    borderColor: focusedField === field ? "#2563eb" : "var(--border)",
+    boxShadow: focusedField === field ? "0 0 0 3px rgba(37,99,235,0.1)" : "none",
+  });
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
       <Sidebar />
-      <div className="flex-1 flex flex-col">
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <Navbar title="Users" />
-        <main className="flex-1 p-6">
+        <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
 
           {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <p className="text-sm text-gray-500">{users.length} users found</p>
-            <button
-              onClick={() => { setShowForm(!showForm); setStep(1); setError(""); }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
-            >
-              {showForm ? "Cancel" : "+ New User"}
-            </button>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+            <div>
+              <p style={{ fontSize: "11px", color: "var(--muted)", letterSpacing: "1.5px", fontWeight: 600 }}>TOTAL</p>
+              <p style={{ fontSize: "24px", fontWeight: 700, fontFamily: "'Sora', sans-serif", color: "var(--text)" }}>
+                {users.length} <span style={{ fontSize: "14px", color: "var(--muted)", fontFamily: "'DM Sans'" }}>users</span>
+              </p>
+            </div>
+            <Btn onClick={() => { setShowForm(!showForm); setStep(1); setError(""); }} variant={showForm ? "ghost" : "primary"}>
+              {showForm ? "✕ Cancel" : "+ New User"}
+            </Btn>
           </div>
 
-          {/* ── STEP 1 — Create User Form ── */}
+          {/* Step 1 — Create User */}
           {showForm && step === 1 && (
-            <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-semibold">1</div>
-                  <span className="text-sm font-semibold text-gray-700">User Info</span>
-                </div>
-                <div className="flex-1 h-px bg-gray-200" />
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-gray-200 text-gray-400 text-xs flex items-center justify-center font-semibold">2</div>
-                  <span className="text-sm text-gray-400">Assign Events</span>
-                </div>
+            <div className="animate-fade-up" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "16px", padding: "24px 28px", marginBottom: "24px" }}>
+              {/* Stepper */}
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
+                <StepDot num={1} active={true} done={false} />
+                <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>User Info</span>
+                <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+                <StepDot num={2} active={false} done={false} />
+                <span style={{ fontSize: "13px", color: "var(--muted)" }}>Assign Events</span>
               </div>
 
               {error && (
-                <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg mb-4">{error}</div>
+                <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: "12px 16px", borderRadius: "8px", fontSize: "13px", marginBottom: "16px" }}>{error}</div>
               )}
 
-              <form onSubmit={handleCreateUser} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                  <input
-                    type="text" required
-                    value={form.name}
-                    onChange={e => setForm({ ...form, name: e.target.value })}
-                    placeholder="e.g. Sara Ahmed"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    type="email" required
-                    value={form.email}
-                    onChange={e => setForm({ ...form, email: e.target.value })}
-                    placeholder="sara@example.com"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                  <input
-                    type="password" required
-                    value={form.password}
-                    onChange={e => setForm({ ...form, password: e.target.value })}
-                    placeholder="••••••••"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                  <select
-                    value={form.role}
-                    onChange={e => setForm({ ...form, role: e.target.value })}
-                    className={inputClass}
-                  >
+              <form onSubmit={handleCreateUser} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <FieldGroup label="FULL NAME">
+                  <input type="text" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                    placeholder="e.g. Sara Ahmed" style={getFocusStyle("name")}
+                    onFocus={() => setFocusedField("name")} onBlur={() => setFocusedField(null)} />
+                </FieldGroup>
+                <FieldGroup label="EMAIL">
+                  <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
+                    placeholder="sara@example.com" style={getFocusStyle("email")}
+                    onFocus={() => setFocusedField("email")} onBlur={() => setFocusedField(null)} />
+                </FieldGroup>
+                <FieldGroup label="PASSWORD">
+                  <input type="password" required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+                    placeholder="••••••••" style={getFocusStyle("password")}
+                    onFocus={() => setFocusedField("password")} onBlur={() => setFocusedField(null)} />
+                </FieldGroup>
+                <FieldGroup label="ROLE">
+                  <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} style={inputStyle}>
                     <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
                   </select>
-                </div>
-
-                <div className="sm:col-span-2 flex justify-end gap-3 pt-2 border-t border-gray-100">
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    {form.role === "manager" ? "Next: Assign Events →" : "Create Admin"}
-                  </button>
+                </FieldGroup>
+                <div style={{ gridColumn: "1/-1", display: "flex", justifyContent: "flex-end", gap: "10px", paddingTop: "8px", borderTop: "1px solid var(--border)" }}>
+                  <Btn variant="ghost" onClick={resetForm} type="button">Cancel</Btn>
+                  <Btn type="submit">{form.role === "manager" ? "Next: Assign Events →" : "Create Admin"}</Btn>
                 </div>
               </form>
             </div>
           )}
 
-          {/* ── STEP 2 — Assign Events ── */}
+          {/* Step 2 — Assign Events */}
           {showForm && step === 2 && (
-            <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-green-500 text-white text-xs flex items-center justify-center font-semibold">✓</div>
-                  <span className="text-sm text-gray-400">User Info</span>
-                </div>
-                <div className="flex-1 h-px bg-blue-200" />
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-semibold">2</div>
-                  <span className="text-sm font-semibold text-gray-700">Assign Events</span>
-                </div>
+            <div className="animate-fade-up" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "16px", padding: "24px 28px", marginBottom: "24px" }}>
+              {/* Stepper */}
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+                <StepDot num={1} active={false} done={true} />
+                <span style={{ fontSize: "13px", color: "var(--muted)" }}>User Info</span>
+                <div style={{ flex: 1, height: "1px", background: "#10b981", opacity: 0.4 }} />
+                <StepDot num={2} active={true} done={false} />
+                <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>Assign Events</span>
               </div>
 
-              <p className="text-sm text-gray-500 mb-4">
-                Select events to assign to <span className="font-semibold text-gray-700">{form.name}</span>. You can skip this and assign later.
+              <p style={{ fontSize: "13px", color: "var(--muted)", marginBottom: "16px" }}>
+                Select events to assign to <span style={{ color: "var(--text)", fontWeight: 600 }}>{form.name}</span>. You can skip and assign later.
               </p>
 
               {error && (
-                <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg mb-4">{error}</div>
+                <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: "12px 16px", borderRadius: "8px", fontSize: "13px", marginBottom: "16px" }}>{error}</div>
               )}
 
-              {/* Event Selection Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 max-h-72 overflow-y-auto pr-1">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", maxHeight: "280px", overflowY: "auto", marginBottom: "16px", paddingRight: "4px" }}>
                 {events.map(ev => {
                   const isSelected = selectedEvents.includes(ev.id);
+                  const statusColors = { upcoming: "#60a5fa", live: "#34d399", selling: "#fbbf24", closed: "#94a3b8" };
                   return (
-                    <div
-                      key={ev.id}
-                      onClick={() => toggleEvent(ev.id)}
-                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                        isSelected
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-gray-300 bg-white"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 truncate">{ev.name}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{ev.location}</p>
-                          <p className="text-xs text-gray-400">{new Date(ev.date).toLocaleDateString()}</p>
+                    <div key={ev.id} onClick={() => toggleEvent(ev.id)} style={{
+                      padding: "14px", borderRadius: "10px", cursor: "pointer",
+                      border: `1px solid ${isSelected ? "#2563eb" : "var(--border)"}`,
+                      background: isSelected ? "rgba(37,99,235,0.1)" : "var(--surface2)",
+                      transition: "all 0.15s",
+                    }}
+                      onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = "#3b4565"; }}
+                      onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = "var(--border)"; }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "2px" }}>{ev.name}</p>
+                          <p style={{ fontSize: "11px", color: "var(--muted)" }}>{ev.location}</p>
+                          <p style={{ fontSize: "11px", color: "var(--muted)" }}>{new Date(ev.date).toLocaleDateString()}</p>
                         </div>
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ml-3 mt-0.5 flex-shrink-0 ${
-                          isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300"
-                        }`}>
-                          {isSelected && (
-                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
+                        <div style={{
+                          width: "20px", height: "20px", borderRadius: "50%", flexShrink: 0, marginLeft: "10px",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          border: `2px solid ${isSelected ? "#2563eb" : "var(--border)"}`,
+                          background: isSelected ? "#2563eb" : "transparent",
+                          transition: "all 0.15s",
+                        }}>
+                          {isSelected && <span style={{ color: "white", fontSize: "10px", fontWeight: 700 }}>✓</span>}
                         </div>
                       </div>
-                      <div className="mt-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          ev.status === "upcoming" ? "bg-blue-100 text-blue-700" :
-                          ev.status === "live"     ? "bg-green-100 text-green-700" :
-                          ev.status === "selling"  ? "bg-yellow-100 text-yellow-700" :
-                          "bg-red-100 text-red-700"
-                        }`}>
-                          {ev.status}
-                        </span>
-                        <span className="text-xs text-gray-400 ml-2">
-                          {ev.attendees}/{ev.capacity} attendees
-                        </span>
+                      <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ fontSize: "10px", color: statusColors[ev.status] || "#60a5fa" }}>● {ev.status}</span>
+                        <span style={{ fontSize: "10px", color: "var(--muted)" }}>{ev.attendees}/{ev.capacity}</span>
                       </div>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Selected count */}
-              <p className="text-xs text-gray-400 mb-4">
-                {selectedEvents.length === 0
-                  ? "No events selected"
-                  : `${selectedEvents.length} event${selectedEvents.length > 1 ? "s" : ""} selected`
-                }
+              <p style={{ fontSize: "11px", color: "var(--muted)", marginBottom: "16px" }}>
+                {selectedEvents.length === 0 ? "No events selected" : `${selectedEvents.length} event${selectedEvents.length > 1 ? "s" : ""} selected`}
               </p>
 
-              <div className="flex justify-between gap-3 pt-4 border-t border-gray-100">
-                <button
-                  onClick={resetForm}
-                  className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => { fetchUsers(); resetForm(); }}
-                    className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700"
-                  >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
+                <Btn variant="ghost" onClick={resetForm}>Cancel</Btn>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button onClick={() => { fetchUsers(); resetForm(); }} style={{ padding: "9px 16px", background: "transparent", border: "none", color: "var(--muted)", fontSize: "12px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
                     Skip for now
                   </button>
-                  <button
-                    onClick={handleAssignEvents}
-                    disabled={selectedEvents.length === 0}
-                    className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Assign & Finish
-                  </button>
+                  <Btn onClick={handleAssignEvents} disabled={selectedEvents.length === 0}>Assign & Finish</Btn>
                 </div>
               </div>
             </div>
           )}
 
           {error && !showForm && (
-            <p className="text-red-500 text-sm mb-4">{error}</p>
+            <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: "12px 16px", borderRadius: "10px", fontSize: "13px", marginBottom: "16px" }}>{error}</div>
           )}
 
           {/* Users Table */}
-          {loading ? <p className="text-gray-500">Loading...</p> : (
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
-                  <tr>
-                    {["Name", "Email", "Role", "Joined", "Actions"].map(h => (
-                      <th key={h} className="px-4 py-3 text-left">{h}</th>
+          {loading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {[...Array(5)].map((_, i) => <div key={i} className="skeleton" style={{ height: "52px", borderRadius: "8px" }} />)}
+            </div>
+          ) : (
+            <div className="animate-fade-up" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "16px", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "var(--surface2)", borderBottom: "1px solid var(--border)" }}>
+                    {["Name","Email","Role","Joined","Actions"].map(h => (
+                      <th key={h} style={{ padding: "12px 20px", textAlign: "left", fontSize: "10px", fontWeight: 600, color: "var(--muted)", letterSpacing: "1.5px", fontFamily: "'Sora', sans-serif" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {users.map(u => (
-                    <tr key={u.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-800">{u.name}</td>
-                      <td className="px-4 py-3 text-gray-500">{u.email}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleColor[u.role]}`}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500">
-                        {new Date(u.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3">
-                        {u.role !== "admin" ? (
-                          <button
-                            onClick={() => handleDelete(u.id)}
-                            className="text-red-500 hover:text-red-700 text-xs font-medium"
-                          >
-                            Delete
-                          </button>
-                        ) : (
-                          <span className="text-gray-300 text-xs">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                <tbody>
+                  {users.map((u, i) => {
+                    const isAdmin = u.role === "admin";
+                    return (
+                      <tr key={u.id} style={{ borderBottom: "1px solid var(--border)", animationDelay: `${i * 0.04}s` }} className="animate-fade-up"
+                        onMouseEnter={e => e.currentTarget.style.background = "var(--surface2)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                        <td style={{ padding: "14px 20px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <div style={{
+                              width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0,
+                              background: isAdmin ? "linear-gradient(135deg, #ef4444, #dc2626)" : "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: "12px", fontWeight: 700, color: "white",
+                            }}>
+                              {u.name?.charAt(0).toUpperCase()}
+                            </div>
+                            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>{u.name}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: "14px 20px", fontSize: "13px", color: "var(--muted)" }}>{u.email}</td>
+                        <td style={{ padding: "14px 20px" }}>
+                          <span style={{
+                            padding: "3px 10px", borderRadius: "20px", fontSize: "10px", fontWeight: 600, letterSpacing: "0.5px",
+                            background: isAdmin ? "rgba(239,68,68,0.15)" : "rgba(37,99,235,0.15)",
+                            border: `1px solid ${isAdmin ? "rgba(239,68,68,0.3)" : "rgba(37,99,235,0.3)"}`,
+                            color: isAdmin ? "#f87171" : "#60a5fa",
+                            fontFamily: "'Sora', sans-serif",
+                          }}>
+                            {u.role?.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ padding: "14px 20px", fontSize: "13px", color: "var(--muted)" }}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                        <td style={{ padding: "14px 20px" }}>
+                          {!isAdmin ? (
+                            <button onClick={() => handleDelete(u.id)} style={{
+                              fontSize: "11px", fontWeight: 600, color: "#f87171",
+                              background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)",
+                              padding: "4px 12px", borderRadius: "6px", cursor: "pointer", transition: "all 0.15s",
+                            }}
+                              onMouseEnter={e => e.target.style.background = "rgba(239,68,68,0.2)"}
+                              onMouseLeave={e => e.target.style.background = "rgba(239,68,68,0.1)"}>
+                              Delete
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: "12px", color: "var(--border)" }}>—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

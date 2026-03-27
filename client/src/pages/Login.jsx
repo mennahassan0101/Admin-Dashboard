@@ -2,81 +2,131 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import API from "../api/axios";
+import { Card, StatCard, Badge, Table, Tr, Td, Btn, Modal, Input, Select } from "../components/UI.jsx";
 
 export default function Login() {
-  const [email, setEmail]       = useState("");
+  const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError]       = useState("");
-  const [loading, setLoading]   = useState(false);
-
+  const [error,    setError]    = useState("");
+  const [loading,  setLoading]  = useState(false);
   const { login } = useAuth();
   const navigate  = useNavigate();
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError("");
-        setLoading(true);
-        try {
-            const res = await API.post("/Users/login", { email, password });
-            login(res.data.user, res.data.token);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(""); setLoading(true);
+    try {
+      const res = await API.post("/Users/login", { email, password });
+      login(res.data.user, res.data.token);
+      navigate(res.data.user.role === "admin" ? "/dashboard" : "/dashboard");
+    } catch (err) {
+      setError(err.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            // redirect based on role
-            // if (res.data.user.role === "viewer") {
-            // navigate("/events");
-            // } else {
-            // navigate("/dashboard");
-            // }
-            navigate("/dashboard");
-        } catch (err) {
-            setError(err.response?.data?.message || "Login failed");
-        } finally {
-            setLoading(false);
-        }
-    };
+  const inputStyle = {
+    width: "100%", padding: "12px 16px",
+    background: "var(--surface2)",
+    border: "1px solid var(--border)",
+    borderRadius: "10px", color: "var(--text)",
+    fontSize: "14px", fontFamily: "'DM Sans', sans-serif",
+    outline: "none", transition: "border-color 0.15s",
+  };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-2xl shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Welcome back</h1>
-        <p className="text-sm text-gray-500 mb-6">Sign in to your dashboard</p>
+    <div style={{
+      minHeight: "100vh",
+      background: "var(--bg)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "20px",
+      backgroundImage: "radial-gradient(ellipse at 20% 50%, rgba(37,99,235,0.08) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(16,185,129,0.06) 0%, transparent 50%)",
+    }}>
+      <div className="animate-fade-up" style={{
+        width: "100%", maxWidth: "420px",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+        borderRadius: "20px",
+        padding: "40px",
+        boxShadow: "0 25px 50px rgba(0,0,0,0.4)",
+      }}>
+        {/* Logo */}
+        <div style={{ marginBottom: "32px" }}>
+          <div style={{
+            fontFamily: "'Sora', sans-serif",
+            fontSize: "22px", fontWeight: 700,
+            letterSpacing: "2px",
+            background: "linear-gradient(135deg, #2563eb, #10b981)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            marginBottom: "6px",
+          }}>
+            EVENTCORE
+          </div>
+          <p style={{ color: "var(--muted)", fontSize: "14px", margin: 0 }}>
+            Sign in to your dashboard
+          </p>
+        </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg mb-4">
+          <div style={{
+            background: "rgba(239,68,68,0.1)",
+            border: "1px solid rgba(239,68,68,0.3)",
+            color: "#ef4444", padding: "12px 16px",
+            borderRadius: "10px", fontSize: "13px",
+            marginBottom: "20px",
+          }}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: "16px" }}>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--muted)", letterSpacing: "1px", marginBottom: "8px" }}>
+              EMAIL
+            </label>
             <input
-              type="email"
+              type="email" required
               value={email}
               onChange={e => setEmail(e.target.value)}
-              required
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="admin@example.com"
+              style={inputStyle}
+              onFocus={e => e.target.style.borderColor = "#2563eb"}
+              onBlur={e => e.target.style.borderColor = "var(--border)"}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <div style={{ marginBottom: "24px" }}>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--muted)", letterSpacing: "1px", marginBottom: "8px" }}>
+              PASSWORD
+            </label>
             <input
-              type="password"
+              type="password" required
               value={password}
               onChange={e => setPassword(e.target.value)}
-              required
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="••••••••"
+              style={inputStyle}
+              onFocus={e => e.target.style.borderColor = "#2563eb"}
+              onBlur={e => e.target.style.borderColor = "var(--border)"}
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+            style={{
+              width: "100%", padding: "13px",
+              background: loading ? "var(--surface2)" : "linear-gradient(135deg, #2563eb, #1d4ed8)",
+              border: "none", borderRadius: "10px",
+              color: "white", fontSize: "14px", fontWeight: 600,
+              fontFamily: "'DM Sans', sans-serif",
+              cursor: loading ? "not-allowed" : "pointer",
+              transition: "all 0.15s",
+              boxShadow: loading ? "none" : "0 4px 15px rgba(37,99,235,0.3)",
+            }}
           >
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? "Signing in..." : "Sign In →"}
           </button>
         </form>
       </div>
