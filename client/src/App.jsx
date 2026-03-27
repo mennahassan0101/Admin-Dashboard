@@ -23,18 +23,17 @@ export default function App() {
           {/* Public route - anyone can visit login */}
           <Route path="/login" element={<Login />} />
 
-          {/* Protected routes - must be logged in */}
           <Route path="/dashboard" element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={["admin", "manager"]}>
               <Dashboard />
             </ProtectedRoute>
-          }/>
+          } />
 
           <Route path="/events" element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={["admin", "manager", "viewer"]}>
               <Events />
             </ProtectedRoute>
-          }/>
+          } />
 
           {/* Role protected - only admin and manager */}
           <Route path="/attendance" element={

@@ -6,11 +6,12 @@ import { useAuth } from "../context/AuthContext";
 
 export default function Events() {
   const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const isViewer = user?.role === "viewer";
+
   const [events, setEvents]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
-
-  // Form state
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     name: "", location: "", date: "", description: "",
@@ -18,7 +19,7 @@ export default function Events() {
   });
 
   const fetchEvents = () => {
-    API.get("/events")
+    API.get("/Events")
       .then(res => setEvents(res.data))
       .catch(() => setError("Failed to load events"))
       .finally(() => setLoading(false));
@@ -29,7 +30,7 @@ export default function Events() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await API.post("/events/create-event", form);
+      await API.post("/Events/create-event", form);
       setShowForm(false);
       setForm({ name:"", location:"", date:"", description:"", capacity:"", status:"upcoming", ticketPrice:"" });
       fetchEvents();
@@ -41,7 +42,7 @@ export default function Events() {
   const handleDelete = async (id) => {
     if (!confirm("Delete this event?")) return;
     try {
-      await API.delete(`/events/${id}`);
+      await API.delete(`/Events/${id}`);
       fetchEvents();
     } catch {
       setError("Failed to delete event");
@@ -65,7 +66,7 @@ export default function Events() {
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <p className="text-sm text-gray-500">{events.length} events found</p>
-            {user?.role === "admin" && (
+            {isAdmin && (
               <button
                 onClick={() => setShowForm(!showForm)}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
@@ -75,8 +76,8 @@ export default function Events() {
             )}
           </div>
 
-          {/* Create Form */}
-          {showForm && (
+          {/* Create Form — admin only */}
+          {showForm && isAdmin && (
             <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 shadow-sm mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
                 { label:"Name",        key:"name",        type:"text" },
@@ -100,7 +101,7 @@ export default function Events() {
                 <select
                   value={form.status}
                   onChange={e => setForm({ ...form, status: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 >
                   {["upcoming","live","selling","closed"].map(s => (
                     <option key={s} value={s}>{s}</option>
@@ -112,7 +113,7 @@ export default function Events() {
                 <textarea
                   value={form.description}
                   onChange={e => setForm({ ...form, description: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                   rows={3}
                 />
               </div>
@@ -132,9 +133,25 @@ export default function Events() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
                   <tr>
-                    {["Name","Location","Date","Capacity","Ticket Price","Status","Actions"].map(h => (
-                      <th key={h} className="px-4 py-3 text-left">{h}</th>
-                    ))}
+                    <th className="px-4 py-3 text-left">Name</th>
+                    <th className="px-4 py-3 text-left">Location</th>
+                    <th className="px-4 py-3 text-left">Date</th>
+                    <th className="px-4 py-3 text-left">Capacity</th>
+                    <th className="px-4 py-3 text-left">Status</th>
+
+                    {/* Ticket prices — visible to all */}
+                    <th className="px-4 py-3 text-left">General Ticket</th>
+                    <th className="px-4 py-3 text-left">VIP Ticket</th>
+
+                    {/* Revenue — hidden from viewer */}
+                    {!isViewer && (
+                      <th className="px-4 py-3 text-left">Revenue</th>
+                    )}
+
+                    {/* Actions — admin only */}
+                    {isAdmin && (
+                      <th className="px-4 py-3 text-left">Actions</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -144,22 +161,40 @@ export default function Events() {
                       <td className="px-4 py-3 text-gray-500">{ev.location}</td>
                       <td className="px-4 py-3 text-gray-500">{new Date(ev.date).toLocaleDateString()}</td>
                       <td className="px-4 py-3 text-gray-500">{ev.capacity}</td>
-                      <td className="px-4 py-3 text-gray-500">${ev.ticketPrice}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor[ev.status]}`}>
                           {ev.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        {user?.role === "admin" && (
+
+                        {/* General ticket price */}
+                        <td className="px-4 py-3 text-gray-500">
+                        ${parseFloat(ev.ticketPrice).toFixed(2)}
+                        </td>
+
+                        {/* VIP ticket price — 2x general */}
+                        <td className="px-4 py-3 text-purple-600 font-medium">
+                        ${(parseFloat(ev.ticketPrice) * 2).toFixed(2)}
+                        </td>
+
+                      {/* Revenue — hidden from viewer */}
+                      {!isViewer && (
+                        <td className="px-4 py-3 text-green-600 font-medium">
+                          ${(ev.attendees * ev.ticketPrice).toFixed(2)}
+                        </td>
+                      )}
+
+                      {/* Actions — admin only */}
+                      {isAdmin && (
+                        <td className="px-4 py-3">
                           <button
                             onClick={() => handleDelete(ev.id)}
                             className="text-red-500 hover:text-red-700 text-xs"
                           >
                             Delete
                           </button>
-                        )}
-                      </td>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

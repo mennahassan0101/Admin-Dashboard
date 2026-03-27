@@ -12,20 +12,26 @@ export default function Login() {
   const { login } = useAuth();
   const navigate  = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const res = await API.post("/users/login", { email, password });
-      login(res.data.user, res.data.token);
-      navigate("/dashboard");
-    } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError("");
+        setLoading(true);
+        try {
+            const res = await API.post("/Users/login", { email, password });
+            login(res.data.user, res.data.token);
+
+            // redirect based on role
+            if (res.data.user.role === "viewer") {
+            navigate("/events");
+            } else {
+            navigate("/dashboard");
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || "Login failed");
+        } finally {
+            setLoading(false);
+        }
+    };
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
