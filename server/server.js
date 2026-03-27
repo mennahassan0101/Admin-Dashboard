@@ -23,7 +23,7 @@ app.use(morgan("common"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended : false}));
 app.use(cors({
-  origin: "https://mulit-event-admin-dashboard.vercel.app",
+  origin: "https://multi-event-management-dashboard.vercel.app",
   credentials: true,
 }));
 
