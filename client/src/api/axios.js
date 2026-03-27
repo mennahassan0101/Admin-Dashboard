@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000",  // ← direct URL, no /api
+  baseURL: "admin-dashboard-production-08e4.up.railway.app",  
 });
 
 API.interceptors.request.use((config) => {
