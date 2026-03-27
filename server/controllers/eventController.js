@@ -1,41 +1,39 @@
-import { Event } from "../models/indexing.js";
+import { Event, User, EventManager } from "../models/indexing.js";
 
 // GET all events — filtered by role
 export const getEvents = async (req, res) => {
-    try {
-        const { id, role } = req.user;
+  try {
+    const { id, role } = req.user;
+    let events;
 
-        let events;
-
-        if (role === "admin") {
-            // admin sees ALL events with full data
-            events = await Event.findAll({
-                attributes: ["id", "name", "location", "date", "description",
-                    "attendees", "capacity", "status", "ticketPrice", "createdBy"]
-            });
-        } else if (role === "manager") {
-            // manager sees ONLY their own events with full data
-            events = await Event.findAll({
-                where: { createdBy: id },
-                attributes: ["id", "name", "location", "date", "description",
-                    "attendees", "capacity", "status", "ticketPrice", "createdBy"]
-            });
-        } else {
-            // viewer sees ALL events but with basic info only — no financial data
-            events = await Event.findAll({
-                attributes: ["id", "name", "location", "date", "status", "capacity", "attendees"]
-            });
-        }
-
-        if (events.length === 0) {
-            return res.status(404).json({ message: "No events found!" });
-        }
-
-        res.status(200).json(events);
-
-    } catch(error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+    if (role === "admin") {
+      // admin sees ALL events
+      events = await Event.findAll({
+        attributes: ["id", "name", "location", "date", "description",
+          "attendees", "capacity", "status", "ticketPrice", "createdBy"]
+      });
+    } else {
+      // manager sees only ASSIGNED events
+      const user = await User.findByPk(id, {
+        include: [{
+          model: Event,
+          as: "assignedEvents",
+          attributes: ["id", "name", "location", "date", "description",
+            "attendees", "capacity", "status", "ticketPrice", "createdBy"],
+        }]
+      });
+      events = user.assignedEvents;
     }
+
+    if (events.length === 0) {
+      return res.status(404).json({ message: "No events found!" });
+    }
+
+    res.status(200).json(events);
+
+  } catch(error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };
 
 // GET single event — filtered by role
@@ -150,4 +148,86 @@ export const deleteEvent = async (req, res) => {
     } catch(error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
+};
+
+// POST assign manager to event — admin only
+export const assignManager = async (req, res) => {
+  try {
+    const { id } = req.params;         // eventId
+    const { managerId } = req.body;
+
+    // check event exists
+    const event = await Event.findByPk(id);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // check user exists and is a manager
+    const manager = await User.findByPk(managerId);
+    if (!manager) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (manager.role !== "manager") {
+      return res.status(400).json({ message: "User is not a manager" });
+    }
+
+    // check if already assigned
+    const existing = await EventManager.findOne({
+      where: { managerId, eventId: id }
+    });
+    if (existing) {
+      return res.status(400).json({ message: "Manager already assigned to this event" });
+    }
+
+    await EventManager.create({ managerId, eventId: id });
+
+    res.status(201).json({ message: "Manager assigned successfully" });
+
+  } catch(error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// DELETE remove manager from event — admin only
+export const removeManager = async (req, res) => {
+  try {
+    const { id, managerId } = req.params;
+
+    const assignment = await EventManager.findOne({
+      where: { managerId, eventId: id }
+    });
+    if (!assignment) {
+      return res.status(404).json({ message: "Assignment not found" });
+    }
+
+    await assignment.destroy();
+    res.status(200).json({ message: "Manager removed from event" });
+
+  } catch(error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// GET all managers for an event — admin only
+export const getEventManagers = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const event = await Event.findByPk(id, {
+      include: [{
+        model: User,
+        as: "assignedManagers",
+        attributes: ["id", "name", "email", "role"],
+      }]
+    });
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    res.status(200).json(event.assignedManagers);
+
+  } catch(error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };

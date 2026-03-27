@@ -11,7 +11,7 @@ import eventsRoutes from "./routes/Events.js";
 import revenueRoutes from "./routes/Revenue.js";
 import usersRoutes from "./routes/Users.js";
 import sequelize from "./config/db.js";
-import { User, Event, Ticket, } from "./models/indexing.js";
+import { User, Event, Ticket, EventManager} from "./models/indexing.js";
 
 /*CONFIG*/
 dotenv.config();

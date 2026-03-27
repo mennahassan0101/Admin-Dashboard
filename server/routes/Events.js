@@ -6,6 +6,9 @@ import {
     createEvent,
     updateEvent,
     deleteEvent,
+    assignManager,
+    removeManager,
+    getEventManagers,
 } from "../controllers/eventController.js";
 
 const router = express.Router();
@@ -16,7 +19,12 @@ router.get("/:id", VerifyToken, authorizeRoles("admin", "manager", "viewer"), ge
 
 // admin ONLY — all modifications
 router.post("/create-event", VerifyToken, authorizeRoles("admin"), createEvent);
-router.put("/:id", VerifyToken, authorizeRoles("admin"), updateEvent);
-router.delete("/:id", VerifyToken, authorizeRoles("admin"), deleteEvent);
+router.put("/update/:id", VerifyToken, authorizeRoles("admin"), updateEvent);
+router.delete("/delete/:id", VerifyToken, authorizeRoles("admin"), deleteEvent);
+
+// Admin only — manage assignments
+router.post("/:id/assign", VerifyToken, authorizeRoles("admin"), assignManager);
+router.delete("/:id/assign/:managerId", VerifyToken, authorizeRoles("admin"), removeManager);
+router.get("/:id/managers", VerifyToken, authorizeRoles("admin"), getEventManagers);
 
 export default router;
