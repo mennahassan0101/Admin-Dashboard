@@ -7,7 +7,7 @@ import { useAuth } from "../context/AuthContext";
 export default function Events() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const isViewer = user?.role === "viewer";
+  //const isViewer = user?.role === "viewer";
 
   const [events, setEvents]   = useState([]);
   const [loading, setLoading] = useState(true);
@@ -143,10 +143,10 @@ export default function Events() {
                     <th className="px-4 py-3 text-left">General Ticket</th>
                     <th className="px-4 py-3 text-left">VIP Ticket</th>
 
-                    {/* Revenue — hidden from viewer */}
+                    {/* Revenue — hidden from viewer
                     {!isViewer && (
                       <th className="px-4 py-3 text-left">Revenue</th>
-                    )}
+                    )} */}
 
                     {/* Actions — admin only */}
                     {isAdmin && (
@@ -178,11 +178,11 @@ export default function Events() {
                         </td>
 
                       {/* Revenue — hidden from viewer */}
-                      {!isViewer && (
+                      {/* {!isViewer && (
                         <td className="px-4 py-3 text-green-600 font-medium">
                           ${(ev.attendees * ev.ticketPrice).toFixed(2)}
                         </td>
-                      )}
+                      )} */}
 
                       {/* Actions — admin only */}
                       {isAdmin && (

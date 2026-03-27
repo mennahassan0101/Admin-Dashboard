@@ -2,8 +2,8 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const links = [
-  { to: "/dashboard",  label: "Dashboard",  roles: ["admin", "manager"] }, // ← remove viewer
-  { to: "/events",     label: "Events",      roles: ["admin", "manager", "viewer"] },
+  { to: "/dashboard",  label: "Dashboard",  roles: ["admin", "manager"] }, 
+  { to: "/events",     label: "Events",      roles: ["admin", "manager"] },
   { to: "/attendance", label: "Attendance",  roles: ["admin", "manager"] },
   { to: "/analytics",  label: "Analytics",   roles: ["admin", "manager"] },
   { to: "/revenue",    label: "Revenue",     roles: ["admin"] },

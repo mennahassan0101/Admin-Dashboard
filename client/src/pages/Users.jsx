@@ -8,7 +8,8 @@ export default function Users() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name:"", email:"", password:"", role:"viewer" });
+  const [form, setForm] = useState({ name:"", email:"", password:"", role:"manager" });
+
 
   const fetchUsers = () => {
     API.get("/users")
@@ -24,7 +25,7 @@ export default function Users() {
     try {
       await API.post("/users/add-user", form);
       setShowForm(false);
-      setForm({ name:"", email:"", password:"", role:"viewer" });
+      setForm({ name:"", email:"", password:"", role:"manager" });
       fetchUsers();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create user");
@@ -41,12 +42,10 @@ export default function Users() {
     }
   };
 
-  const roleColor = {
-    admin:   "bg-red-100 text-red-700",
-    manager: "bg-blue-100 text-blue-700",
-    viewer:  "bg-gray-100 text-gray-700",
-  };
-
+    const roleColor = {
+        admin:   "bg-red-100 text-red-700",
+        manager: "bg-blue-100 text-blue-700",
+    };
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
@@ -88,9 +87,9 @@ export default function Users() {
                   onChange={e => setForm({ ...form, role: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {["admin","manager","viewer"].map(r => (
+                    {["admin","manager"].map(r => (
                     <option key={r} value={r}>{r}</option>
-                  ))}
+                    ))}
                 </select>
               </div>
               <div className="sm:col-span-2">

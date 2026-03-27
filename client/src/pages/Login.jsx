@@ -21,11 +21,12 @@ export default function Login() {
             login(res.data.user, res.data.token);
 
             // redirect based on role
-            if (res.data.user.role === "viewer") {
-            navigate("/events");
-            } else {
+            // if (res.data.user.role === "viewer") {
+            // navigate("/events");
+            // } else {
+            // navigate("/dashboard");
+            // }
             navigate("/dashboard");
-            }
         } catch (err) {
             setError(err.response?.data?.message || "Login failed");
         } finally {

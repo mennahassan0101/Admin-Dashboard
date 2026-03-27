@@ -30,7 +30,7 @@ export default function App() {
           } />
 
           <Route path="/events" element={
-            <ProtectedRoute roles={["admin", "manager", "viewer"]}>
+            <ProtectedRoute roles={["admin", "manager"]}>
               <Events />
             </ProtectedRoute>
           } />
