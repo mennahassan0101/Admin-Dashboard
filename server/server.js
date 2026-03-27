@@ -28,12 +28,12 @@ app.use(cors({
 }));
 
 /*ROUTES*/
-app.use("/Dashboard",dashboardRoutes);
-app.use("/Events",eventsRoutes);
-app.use("/Analytics",analyticsRoutes);
-app.use("/Attendence",attendenceRoutes);
-app.use("/Revenue",revenueRoutes);
-app.use("/Users",usersRoutes);
+app.use("/api/dashboard",  dashboardRoutes);
+app.use("/api/events",     eventsRoutes);
+app.use("/api/analytics",  analyticsRoutes);
+app.use("/api/attendance", attendenceRoutes);
+app.use("/api/revenue",    revenueRoutes);
+app.use("/api/users",      usersRoutes);
 
 
 
