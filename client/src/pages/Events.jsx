@@ -186,7 +186,7 @@ export default function Events() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
       <Sidebar />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", marginLeft: "220px" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <Navbar title="Events" />
         <main style={{ flex: 1, padding: "32px" }}>
 
