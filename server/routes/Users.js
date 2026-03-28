@@ -6,7 +6,7 @@ import { authorizeRoles, VerifyToken } from "../middleware/auth.js";
 
 const router =express.Router();
 //no need for middleware
-router.post("/login",login);// why post not get ? explain more
+router.post("/login",login);
 
 //Before getting to the controller - apply middleware
 router.get("/",VerifyToken,authorizeRoles("admin"),getUsersController);

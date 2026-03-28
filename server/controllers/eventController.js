@@ -75,35 +75,31 @@ export const getEventById = async (req, res) => {
 
 // POST create event — admin only
 export const createEvent = async (req, res) => {
-    try {
-        const { name, location, date, description, capacity, status, ticketPrice } = req.body;
+  try {
+    const { name, location, date, description, capacity, status, ticketPrice, createdBy } = req.body;
 
-        if (!name || !location || !date || !capacity || !status || !ticketPrice) {
-            return res.status(400).json({ message: "All fields are required" });
-        }
+    if (!name || !location || !date || !capacity || !status || !ticketPrice || !createdBy)
+      return res.status(400).json({ message: "All fields are required" });
 
-        const ev = await Event.findOne({ where: { name, date } });
-        if (ev) {
-            return res.status(400).json({ message: "Event already exists on this date!" });
-        }
+    const ev = await Event.findOne({ where: { name, date } });
+    if (ev)
+      return res.status(400).json({ message: "Event already exists on this date!" });
 
-        const createdBy = req.user.id;
+    const newEvent = await Event.create({
+      name, location, date, description,
+      capacity, status, ticketPrice,
+      createdBy  // ← use from body instead of req.user.id
+    });
 
-        const newEvent = await Event.create({
-            name, location, date, description,
-            capacity, status, ticketPrice, createdBy
-        });
+    res.status(201).json({
+      message: "Event created Successfully.",
+      event: newEvent,
+    });
 
-        res.status(201).json({
-            message: "Event created Successfully.",
-            event: newEvent,
-        });
-
-    } catch(error) {
-        res.status(500).json({ message: "Server error", error: error.message });
-    }
+  } catch(error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };
-
 // PUT update event — admin only
 export const updateEvent = async (req, res) => {
     try {
