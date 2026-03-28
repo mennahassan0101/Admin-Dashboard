@@ -23,7 +23,10 @@ app.use(morgan("common"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended : false}));
 app.use(cors({
-  origin: "https://multi-event-management-dashboard.vercel.app",
+  origin: [
+  "https://multi-event-management-dashboard.vercel.app",
+  /https:\/\/multi-event-management-das.*\.vercel\.app/,
+ ],
   credentials: true,
 }));
 
