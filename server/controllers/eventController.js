@@ -149,18 +149,32 @@ export const deleteEvent = async (req, res) => {
 // POST assign manager to event — admin only
 export const assignManager = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params;         // eventId
     const { managerId } = req.body;
 
+    // check event exists
     const event = await Event.findByPk(id);
-    if (!event) return res.status(404).json({ message: "Event not found" });
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
 
+    // check user exists and is a manager
     const manager = await User.findByPk(managerId);
-    if (!manager) return res.status(404).json({ message: "User not found" });
-    if (manager.role !== "manager") return res.status(400).json({ message: "User is not a manager" });
+    if (!manager) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (manager.role !== "manager") {
+      return res.status(400).json({ message: "User is not a manager" });
+    }
 
-    // ← Remove existing assignment first then create new one
-    await EventManager.destroy({ where: { eventId: id } });
+    // check if already assigned
+    const existing = await EventManager.findOne({
+      where: { managerId, eventId: id }
+    });
+    if (existing) {
+      return res.status(400).json({ message: "Manager already assigned to this event" });
+    }
+
     await EventManager.create({ managerId, eventId: id });
 
     res.status(201).json({ message: "Manager assigned successfully" });
@@ -170,6 +184,7 @@ export const assignManager = async (req, res) => {
   }
 };
 
+// DELETE remove manager from event — admin only
 export const removeManager = async (req, res) => {
   try {
     const { id, managerId } = req.params;
