@@ -66,30 +66,52 @@ export default function Events() {
     }
   }, []);
 
-  const openEdit = (ev) => {
-    setEditEvent(ev); setEditError("");
+    const openEdit = (ev) => {
+    setEditEvent(ev);
+    setEditError("");
     setEditForm({
-      name: ev.name || "", location: ev.location || "",
-      date: ev.date ? ev.date.split("T")[0] : "",
-      description: ev.description || "",
-      capacity: ev.capacity || "", status: ev.status || "upcoming",
-      ticketPrice: ev.ticketPrice || "",
-      assignedTo: ev.createdBy || "",
+        name:        ev.name        || "",
+        location:    ev.location    || "",
+        date:        ev.date ? ev.date.split("T")[0] : "",
+        description: ev.description || "",
+        capacity:    ev.capacity    || "",
+        status:      ev.status      || "upcoming",
+        ticketPrice: ev.ticketPrice || "",
+        assignedTo:  "",   // will be set by dropdown
     });
-  };
+    };
 
-  const handleEditSubmit = async (e) => {
-    e.preventDefault(); setEditLoading(true); setEditError("");
-    try {
-      await API.put(`/events/update/${editEvent.id}`, {
-        ...editForm,
-        createdBy: editForm.assignedTo,
-      });
-      setEditEvent(null); fetchEvents();
-    } catch (err) {
-      setEditError(err.response?.data?.message || "Failed to update event");
-    } finally { setEditLoading(false); }
-  };
+    const handleEditSubmit = async (e) => {
+        e.preventDefault();
+        setEditLoading(true);
+        setEditError("");
+        try {
+            
+            await API.put(`/events/${editEvent.id}`, {
+            name:        editForm.name,
+            location:    editForm.location,
+            date:        editForm.date,
+            description: editForm.description,
+            capacity:    editForm.capacity,
+            status:      editForm.status,
+            ticketPrice: editForm.ticketPrice,
+            });
+
+            // 2. If manager changed — assign new manager
+            if (editForm.assignedTo && editForm.assignedTo !== editEvent.assignedManagerId) {
+            await API.post(`/events/${editEvent.id}/assign`, {
+                managerId: editForm.assignedTo,
+            });
+            }
+
+            setEditEvent(null);
+            fetchEvents();
+        } catch (err) {
+            setEditError(err.response?.data?.message || "Failed to update event");
+        } finally {
+            setEditLoading(false);
+        }
+    };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
