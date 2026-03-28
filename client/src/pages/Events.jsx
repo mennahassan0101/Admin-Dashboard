@@ -3,11 +3,11 @@ import Sidebar from "../components/Sidebar";
 import Navbar  from "../components/Navbar";
 import API     from "../api/axios";
 import { useAuth } from "../context/AuthContext";
-import { Btn, Modal, Input, Select } from "../components/UI.jsx";
+import { Btn } from "../components/UI.jsx";
 
 const emptyForm = {
   name: "", location: "", date: "", description: "",
-  capacity: "", status: "upcoming", ticketPrice: ""
+  capacity: "", status: "upcoming", ticketPrice: "", assignedTo: ""
 };
 
 const statusStyle = {
@@ -38,6 +38,7 @@ export default function Events() {
   const isAdmin  = user?.role === "admin";
 
   const [events,   setEvents]   = useState([]);
+  const [managers, setManagers] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -49,9 +50,21 @@ export default function Events() {
 
   const fetchEvents = () => {
     setLoading(true);
-    API.get("/events").then(res => setEvents(res.data)).catch(() => setError("Failed to load events")).finally(() => setLoading(false));
+    API.get("/events")
+      .then(res => setEvents(res.data))
+      .catch(() => setError("Failed to load events"))
+      .finally(() => setLoading(false));
   };
-  useEffect(() => { fetchEvents(); }, []);
+
+  useEffect(() => {
+    fetchEvents();
+    // fetch managers list for assignment dropdown (admin only)
+    if (user?.role === "admin") {
+      API.get("/users").then(res => {
+        setManagers(res.data.filter(u => u.role === "manager"));
+      }).catch(() => {});
+    }
+  }, []);
 
   const openEdit = (ev) => {
     setEditEvent(ev); setEditError("");
@@ -61,24 +74,34 @@ export default function Events() {
       description: ev.description || "",
       capacity: ev.capacity || "", status: ev.status || "upcoming",
       ticketPrice: ev.ticketPrice || "",
+      assignedTo: ev.createdBy || "",
     });
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault(); setEditLoading(true); setEditError("");
     try {
-      await API.put(`/events/update/${editEvent.id}`, editForm);
+      await API.put(`/events/update/${editEvent.id}`, {
+        ...editForm,
+        createdBy: editForm.assignedTo,
+      });
       setEditEvent(null); fetchEvents();
-    } catch (err) { setEditError(err.response?.data?.message || "Failed to update event"); }
-    finally { setEditLoading(false); }
+    } catch (err) {
+      setEditError(err.response?.data?.message || "Failed to update event");
+    } finally { setEditLoading(false); }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await API.post("/events/create-event", form);
+      await API.post("/events/create-event", {
+        ...form,
+        createdBy: form.assignedTo,  // send assignedTo as createdBy
+      });
       setShowForm(false); setForm(emptyForm); fetchEvents();
-    } catch (err) { setError(err.response?.data?.message || "Failed to create event"); }
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to create event");
+    }
   };
 
   const handleDelete = async (id) => {
@@ -100,6 +123,18 @@ export default function Events() {
     );
   };
 
+  // Reusable manager dropdown
+  const ManagerDropdown = ({ value, onChange }) => (
+    <FieldGroup label="Assign to Manager">
+      <select value={value} onChange={onChange} style={inputStyle} required>
+        <option value="">Select a manager</option>
+        {managers.map(m => (
+          <option key={m.id} value={m.id}>{m.name}</option>
+        ))}
+      </select>
+    </FieldGroup>
+  );
+
   const FormGrid = ({ formData, setFormData, onSubmit, loading: subLoading, error: subError, onCancel, submitLabel }) => (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
       {subError && (
@@ -118,16 +153,29 @@ export default function Events() {
           <StyledInput type={type} required={required} value={formData[key]} onChange={e => setFormData({ ...formData, [key]: e.target.value })} />
         </FieldGroup>
       ))}
+
+      {/* Status */}
       <FieldGroup label="Status">
         <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} style={inputStyle}>
           {["upcoming","live","selling","closed"].map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </FieldGroup>
+
+      {/* Manager assignment — admin only */}
+      {isAdmin && (
+        <ManagerDropdown
+          value={formData.assignedTo}
+          onChange={e => setFormData({ ...formData, assignedTo: e.target.value })}
+        />
+      )}
+
+      {/* Description — full width */}
       <div style={{ gridColumn: "1/-1" }}>
         <FieldGroup label="Description">
           <StyledInput value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} rows={3} />
         </FieldGroup>
       </div>
+
       <div style={{ gridColumn: "1/-1", display: "flex", justifyContent: "flex-end", gap: "10px", paddingTop: "8px", borderTop: "1px solid var(--border)" }}>
         <Btn variant="ghost" onClick={onCancel}>Cancel</Btn>
         <Btn onClick={onSubmit} disabled={subLoading}>{subLoading ? "Saving..." : submitLabel}</Btn>
@@ -138,14 +186,13 @@ export default function Events() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
       <Sidebar />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", marginLeft: "220px" }}>
         <Navbar title="Events" />
-        <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
+        <main style={{ flex: 1, padding: "32px" }}>
 
           {/* Header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
             <div>
-              <p style={{ fontSize: "11px", color: "var(--muted)", letterSpacing: "1.5px", fontWeight: 600 }}>TOTAL</p>
               <p style={{ fontSize: "24px", fontWeight: 700, fontFamily: "'Sora', sans-serif", color: "var(--text)" }}>
                 {events.length} <span style={{ fontSize: "14px", color: "var(--muted)", fontFamily: "'DM Sans'" }}>events</span>
               </p>
@@ -159,7 +206,7 @@ export default function Events() {
 
           {/* Create Form */}
           {showForm && isAdmin && (
-            <div className="animate-fade-up" style={{
+            <div style={{
               background: "var(--surface)", border: "1px solid var(--border)",
               borderRadius: "16px", padding: "24px 28px", marginBottom: "24px",
             }}>
@@ -182,19 +229,18 @@ export default function Events() {
           {/* Table */}
           {loading ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {[...Array(5)].map((_, i) => <div key={i} className="skeleton" style={{ height: "52px", borderRadius: "8px" }} />)}
+              {[...Array(5)].map((_, i) => (
+                <div key={i} style={{ height: "52px", borderRadius: "8px", background: "var(--surface2)", animation: "pulse 1.5s infinite" }} />
+              ))}
             </div>
           ) : (
-            <div className="animate-fade-up" style={{
-              background: "var(--surface)", border: "1px solid var(--border)",
-              borderRadius: "16px", overflow: "hidden",
-            }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "16px", overflow: "hidden" }}>
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "900px" }}>
                   <thead>
                     <tr style={{ background: "var(--surface2)", borderBottom: "1px solid var(--border)" }}>
                       {["Name","Location","Date","Capacity","Attendees","Fill Rate","Status","General","VIP",
-                        ...(isAdmin ? ["Revenue","Actions"] : [])
+                        ...(isAdmin ? ["Revenue", "Assigned To", "Actions"] : [])
                       ].map(h => (
                         <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: "10px", fontWeight: 600, color: "var(--muted)", letterSpacing: "1.5px", fontFamily: "'Sora', sans-serif", whiteSpace: "nowrap" }}>{h}</th>
                       ))}
@@ -205,10 +251,10 @@ export default function Events() {
                       const s = statusStyle[ev.status] || statusStyle.upcoming;
                       const fillRate = ev.capacity > 0 ? ((ev.attendees / ev.capacity) * 100).toFixed(1) : 0;
                       const fillColor = fillRate >= 80 ? "#10b981" : fillRate >= 50 ? "#f59e0b" : "var(--muted)";
+                      const assignedManager = managers.find(m => m.id === ev.createdBy);
                       return (
                         <tr key={ev.id}
-                          style={{ borderBottom: "1px solid var(--border)", transition: "background 0.1s", animationDelay: `${idx * 0.03}s` }}
-                          className="animate-fade-up"
+                          style={{ borderBottom: "1px solid var(--border)", transition: "background 0.1s" }}
                           onMouseEnter={e => e.currentTarget.style.background = "var(--surface2)"}
                           onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                           <td style={{ padding: "14px 16px", fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>{ev.name}</td>
@@ -232,6 +278,11 @@ export default function Events() {
                           {isAdmin && (
                             <td style={{ padding: "14px 16px", fontSize: "13px", color: "#10b981", fontWeight: 600 }}>
                               ${(ev.attendees * parseFloat(ev.ticketPrice)).toFixed(2)}
+                            </td>
+                          )}
+                          {isAdmin && (
+                            <td style={{ padding: "14px 16px", fontSize: "13px", color: "var(--muted)" }}>
+                              {assignedManager ? assignedManager.name : "—"}
                             </td>
                           )}
                           {isAdmin && (
@@ -259,8 +310,8 @@ export default function Events() {
 
       {/* Edit Modal */}
       {editEvent && (
-        <div className="animate-fade-in" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
-          <div className="animate-fade-up" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "18px", width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.5)" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "18px", width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.5)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "24px 28px", borderBottom: "1px solid var(--border)" }}>
               <div>
                 <p style={{ fontSize: "11px", color: "var(--muted)", letterSpacing: "1px", fontWeight: 600 }}>EDITING</p>
