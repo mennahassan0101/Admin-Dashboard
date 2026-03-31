@@ -33,6 +33,79 @@ const inputStyle = {
   boxSizing: "border-box",
 };
 
+// ✅ FIXED: Stable component definition outside
+const StyledInput = ({ value, onChange, type = "text", required, placeholder, rows }) => {
+  const [focused, setFocused] = useState(false);
+  const style = { ...inputStyle, borderColor: focused ? "#2563eb" : "var(--border)", boxShadow: focused ? "0 0 0 3px rgba(37,99,235,0.1)" : "none" };
+  if (rows) return (
+    <textarea value={value} onChange={onChange} rows={rows} style={{ ...style, resize: "vertical" }}
+      onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+  );
+  return (
+    <input type={type} required={required} value={value} onChange={onChange} placeholder={placeholder}
+      style={style} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+  );
+};
+
+// ✅ FIXED: Now accepts 'managers' as a prop
+const ManagerDropdown = ({ value, onChange, managers }) => (
+  <FieldGroup label="Assign to Manager">
+    <select value={value} onChange={onChange} style={inputStyle} required>
+      <option value="">Select a manager</option>
+      {managers.map(m => (
+        <option key={m.id} value={m.id}>{m.name}</option>
+      ))}
+    </select>
+  </FieldGroup>
+);
+
+// ✅ FIXED: Now accepts 'isAdmin' and 'managers' as props
+const FormGrid = ({ formData, setFormData, onSubmit, loading, error, onCancel, submitLabel, isAdmin, managers }) => (
+  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+    {error && (
+      <div style={{ gridColumn: "1/-1", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: "12px 16px", borderRadius: "8px", fontSize: "13px" }}>
+        {error}
+      </div>
+    )}
+    {[
+      { label: "Event Name",    key: "name",        type: "text",   required: true },
+      { label: "Location",      key: "location",    type: "text",   required: true },
+      { label: "Date",          key: "date",        type: "date",   required: true },
+      { label: "Capacity",      key: "capacity",    type: "number", required: true },
+      { label: "Ticket Price",  key: "ticketPrice", type: "number", required: true },
+    ].map(({ label, key, type, required }) => (
+      <FieldGroup key={key} label={label}>
+        <StyledInput type={type} required={required} value={formData[key]} onChange={e => setFormData({ ...formData, [key]: e.target.value })} />
+      </FieldGroup>
+    ))}
+
+    <FieldGroup label="Status">
+      <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} style={inputStyle}>
+        {["upcoming","live","selling","closed"].map(s => <option key={s} value={s}>{s}</option>)}
+      </select>
+    </FieldGroup>
+
+    {isAdmin && (
+      <ManagerDropdown
+        value={formData.assignedTo}
+        onChange={e => setFormData({ ...formData, assignedTo: e.target.value })}
+        managers={managers}
+      />
+    )}
+
+    <div style={{ gridColumn: "1/-1" }}>
+      <FieldGroup label="Description">
+        <StyledInput value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} rows={3} />
+      </FieldGroup>
+    </div>
+
+    <div style={{ gridColumn: "1/-1", display: "flex", justifyContent: "flex-end", gap: "10px", paddingTop: "8px", borderTop: "1px solid var(--border)" }}>
+      <Btn variant="ghost" onClick={onCancel}>Cancel</Btn>
+      <Btn onClick={onSubmit} disabled={loading}>{loading ? "Saving..." : submitLabel}</Btn>
+    </div>
+  </div>
+);
+
 export default function Events() {
   const { user } = useAuth();
   const isAdmin  = user?.role === "admin";
@@ -132,78 +205,9 @@ export default function Events() {
     catch { setError("Failed to delete event"); }
   };
 
-  const StyledInput = ({ value, onChange, type = "text", required, placeholder, rows }) => {
-    const [focused, setFocused] = useState(false);
-    const style = { ...inputStyle, borderColor: focused ? "#2563eb" : "var(--border)", boxShadow: focused ? "0 0 0 3px rgba(37,99,235,0.1)" : "none" };
-    if (rows) return (
-      <textarea value={value} onChange={onChange} rows={rows} style={{ ...style, resize: "vertical" }}
-        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
-    );
-    return (
-      <input type={type} required={required} value={value} onChange={onChange} placeholder={placeholder}
-        style={style} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
-    );
-  };
 
-  // Reusable manager dropdown
-  const ManagerDropdown = ({ value, onChange }) => (
-    <FieldGroup label="Assign to Manager">
-      <select value={value} onChange={onChange} style={inputStyle} required>
-        <option value="">Select a manager</option>
-        {managers.map(m => (
-          <option key={m.id} value={m.id}>{m.name}</option>
-        ))}
-      </select>
-    </FieldGroup>
-  );
 
-  const FormGrid = ({ formData, setFormData, onSubmit, loading: subLoading, error: subError, onCancel, submitLabel }) => (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-      {subError && (
-        <div style={{ gridColumn: "1/-1", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: "12px 16px", borderRadius: "8px", fontSize: "13px" }}>
-          {subError}
-        </div>
-      )}
-      {[
-        { label: "Event Name",    key: "name",        type: "text",   required: true },
-        { label: "Location",      key: "location",    type: "text",   required: true },
-        { label: "Date",          key: "date",        type: "date",   required: true },
-        { label: "Capacity",      key: "capacity",    type: "number", required: true },
-        { label: "Ticket Price",  key: "ticketPrice", type: "number", required: true },
-      ].map(({ label, key, type, required }) => (
-        <FieldGroup key={key} label={label}>
-          <StyledInput type={type} required={required} value={formData[key]} onChange={e => setFormData({ ...formData, [key]: e.target.value })} />
-        </FieldGroup>
-      ))}
 
-      {/* Status */}
-      <FieldGroup label="Status">
-        <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} style={inputStyle}>
-          {["upcoming","live","selling","closed"].map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-      </FieldGroup>
-
-      {/* Manager assignment — admin only */}
-      {isAdmin && (
-        <ManagerDropdown
-          value={formData.assignedTo}
-          onChange={e => setFormData({ ...formData, assignedTo: e.target.value })}
-        />
-      )}
-
-      {/* Description — full width */}
-      <div style={{ gridColumn: "1/-1" }}>
-        <FieldGroup label="Description">
-          <StyledInput value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} rows={3} />
-        </FieldGroup>
-      </div>
-
-      <div style={{ gridColumn: "1/-1", display: "flex", justifyContent: "flex-end", gap: "10px", paddingTop: "8px", borderTop: "1px solid var(--border)" }}>
-        <Btn variant="ghost" onClick={onCancel}>Cancel</Btn>
-        <Btn onClick={onSubmit} disabled={subLoading}>{subLoading ? "Saving..." : submitLabel}</Btn>
-      </div>
-    </div>
-  );
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
@@ -238,6 +242,8 @@ export default function Events() {
                 onSubmit={handleSubmit} error={error}
                 onCancel={() => { setShowForm(false); setForm(emptyForm); }}
                 submitLabel="Create Event"
+                isAdmin={isAdmin} // ✅ PASSING PROP
+                managers={managers} // ✅ PASSING PROP
               />
             </div>
           )}
@@ -346,6 +352,8 @@ export default function Events() {
                 formData={editForm} setFormData={setEditForm}
                 onSubmit={handleEditSubmit} loading={editLoading} error={editError}
                 onCancel={() => setEditEvent(null)} submitLabel="Save Changes"
+                isAdmin={isAdmin} // ✅ PASSING PROP
+                managers={managers} // ✅ PASSING PROP
               />
             </div>
           </div>
