@@ -150,7 +150,7 @@ export default function Events() {
         capacity:    ev.capacity    || "",
         status:      ev.status      || "upcoming",
         ticketPrice: ev.ticketPrice || "",
-        assignedTo:  "",   // will be set by dropdown
+        assignedTo:  ev.createdBy || "",   
     });
     };
 
@@ -160,7 +160,7 @@ export default function Events() {
         setEditError("");
         try {
             
-            await API.put(`/events/${editEvent.id}`, {
+            await API.put(`/events/update/${editEvent.id}`, {
             name:        editForm.name,
             location:    editForm.location,
             date:        editForm.date,
@@ -171,8 +171,8 @@ export default function Events() {
             });
 
             // 2. If manager changed — assign new manager
-            if (editForm.assignedTo && editForm.assignedTo !== editEvent.assignedManagerId) {
-            await API.post(`/events/${editEvent.id}/assign`, {
+            if (editForm.assignedTo && editForm.assignedTo !== editEvent.createdBy) {
+            await API.post(`/events/update/${editEvent.id}/assign`, {
                 managerId: editForm.assignedTo,
             });
             }
@@ -279,7 +279,9 @@ export default function Events() {
                       const s = statusStyle[ev.status] || statusStyle.upcoming;
                       const fillRate = ev.capacity > 0 ? ((ev.attendees / ev.capacity) * 100).toFixed(1) : 0;
                       const fillColor = fillRate >= 80 ? "#10b981" : fillRate >= 50 ? "#f59e0b" : "var(--muted)";
-                      const assignedManager = managers.find(m => m.id === ev.createdBy);
+                      const assignedManager = ev.assignedManagers && ev.assignedManagers.length > 0 
+                        ? ev.assignedManagers[0] 
+                        : null;
                       return (
                         <tr key={ev.id}
                           style={{ borderBottom: "1px solid var(--border)", transition: "background 0.1s" }}
