@@ -199,11 +199,31 @@ export default function Events() {
       setTimeout(() => {setError("");} , 5000);
     }
   };
+  const [deleteId, setDeleteId] = useState(null);
+  const [isDeleted, setIsDeleted] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [isCloseHovered, setIsCloseHovered] = useState(false);
 
-  const handleDelete = async (id) => {
-    if (!confirm("Delete this event?")) return;
-    try { await API.delete(`/events/delete/${id}`); fetchEvents(); }
-    catch { setError("Failed to delete event"); }
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    
+    setDeleteLoading(true);
+    try {
+      await API.delete(`/events/delete/${deleteId}`);
+      setIsDeleted(true); // Trigger the green "Removed" state
+      
+      // Wait 2 seconds, then close modal and refresh table
+      setTimeout(() => {
+        setDeleteId(null);
+        setIsDeleted(false);
+        fetchEvents();
+      }, 2000);
+    } catch (err) {
+      setError("Failed to delete event");
+      setDeleteId(null);
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
 
@@ -225,27 +245,72 @@ export default function Events() {
               </p>
             </div>
             {isAdmin && (
-              <Btn onClick={() => setShowForm(!showForm)} variant={showForm ? "ghost" : "primary"}>
+              <Btn onClick={() => setShowForm(true)} variant="primary">
                 {showForm ? "✕ Cancel" : "+ New Event"}
               </Btn>
             )}
           </div>
 
-          {/* Create Form */}
+          {/* Create Event Modal */}
           {showForm && isAdmin && (
-            <div style={{
-              background: "var(--surface)", border: "1px solid var(--border)",
-              borderRadius: "16px", padding: "24px 28px", marginBottom: "24px",
+            <div style={{ 
+              position: "fixed", inset: 0, 
+              background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)", 
+              display: "flex", alignItems: "center", justifyContent: "center", 
+              zIndex: 1000, padding: "20px" 
             }}>
-              <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text)", marginBottom: "20px", fontFamily: "'Sora', sans-serif" }}>Create New Event</p>
-              <FormGrid
-                formData={form} setFormData={setForm}
-                onSubmit={handleSubmit} error={error}
-                onCancel={() => { setShowForm(false); setForm(emptyForm); }}
-                submitLabel="Create Event"
-                isAdmin={isAdmin} 
-                managers={managers} 
-              />
+              <div style={{ 
+                background: "var(--surface)", border: "1px solid var(--border)", 
+                borderRadius: "18px", width: "100%", maxWidth: "560px", 
+                maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,0.5)" 
+              }}>
+                {/* Modal Header */}
+                <div style={{ 
+                  display: "flex", alignItems: "center", justifyContent: "space-between", 
+                  padding: "24px 28px", borderBottom: "1px solid var(--border)" 
+                }}>
+                  <div>
+                    <p style={{ fontSize: "11px", color: "var(--muted)", letterSpacing: "1px", fontWeight: 600 }}>ACTION</p>
+                    <h3 style={{ fontFamily: "'Sora', sans-serif", fontSize: "16px", fontWeight: 600, color: "var(--text)", margin: 0 }}>Create New Event</h3>
+                  </div>
+                  <button 
+                    onClick={() => { setShowForm(false); setForm(emptyForm); }} 
+                    onMouseEnter={() => setIsCloseHovered(true)}
+                    onMouseLeave={() => setIsCloseHovered(false)}
+                    style={{ 
+                      width: "32px", 
+                      height: "32px", 
+                      borderRadius: "8px", 
+                      // Changes background and text color on hover
+                      background: isCloseHovered ? "rgba(239, 68, 68, 0.1)" : "var(--surface2)", 
+                      border: isCloseHovered ? "1px solid rgba(239, 68, 68, 0.2)" : "1px solid var(--border)", 
+                      color: isCloseHovered ? "#ef4444" : "var(--muted)", 
+                      cursor: "pointer", 
+                      fontSize: "18px", 
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center",
+                      transition: "all 0.2s ease" // Smooth transition for the color change
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div style={{ padding: "24px 28px" }}>
+                  <FormGrid
+                    formData={form} 
+                    setFormData={setForm}
+                    onSubmit={handleSubmit} 
+                    error={error}
+                    onCancel={() => { setShowForm(false); setForm(emptyForm); }}
+                    submitLabel="Create Event"
+                    isAdmin={isAdmin} 
+                    managers={managers} 
+                  />
+                </div>
+              </div>
             </div>
           )}
 
@@ -322,7 +387,7 @@ export default function Events() {
                                 <button onClick={() => openEdit(ev)} style={{ fontSize: "11px", fontWeight: 600, color: "#60a5fa", background: "rgba(37,99,235,0.1)", border: "1px solid rgba(37,99,235,0.2)", padding: "4px 10px", borderRadius: "6px", cursor: "pointer", transition: "all 0.15s" }}
                                   onMouseEnter={e => e.target.style.background = "rgba(37,99,235,0.2)"}
                                   onMouseLeave={e => e.target.style.background = "rgba(37,99,235,0.1)"}>Edit</button>
-                                <button onClick={() => handleDelete(ev.id)} style={{ fontSize: "11px", fontWeight: 600, color: "#f87171", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", padding: "4px 10px", borderRadius: "6px", cursor: "pointer", transition: "all 0.15s" }}
+                                <button onClick={() => setDeleteId(ev.id)} style={{ fontSize: "11px", fontWeight: 600, color: "#f87171", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", padding: "4px 10px", borderRadius: "6px", cursor: "pointer", transition: "all 0.15s" }}
                                   onMouseEnter={e => e.target.style.background = "rgba(239,68,68,0.2)"}
                                   onMouseLeave={e => e.target.style.background = "rgba(239,68,68,0.1)"}>Delete</button>
                               </div>
@@ -355,10 +420,51 @@ export default function Events() {
                 formData={editForm} setFormData={setEditForm}
                 onSubmit={handleEditSubmit} loading={editLoading} error={editError}
                 onCancel={() => setEditEvent(null)} submitLabel="Save Changes"
-                isAdmin={isAdmin} // ✅ PASSING PROP
-                managers={managers} // ✅ PASSING PROP
+                isAdmin={isAdmin} 
+                managers={managers} 
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteId && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "20px", width: "100%", maxWidth: "400px", padding: "32px", textAlign: "center", boxShadow: "0 20px 50px rgba(0,0,0,0.6)" }}>
+            
+            {!isDeleted ? (
+              <>
+                <div style={{ width: "60px", height: "60px", background: "rgba(239,68,68,0.1)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                  <span style={{ fontSize: "24px", color: "#ef4444" }}>🗑</span>
+                </div>
+                <h3 style={{ fontFamily: "'Sora', sans-serif", color: "var(--text)", marginBottom: "8px" }}>Delete Event?</h3>
+                <p style={{ fontSize: "14px", color: "var(--muted)", marginBottom: "24px", lineHeight: "1.5" }}>
+                  This action cannot be undone. All data associated with this event will be permanently removed.
+                </p>
+                <div style={{ display: "flex", gap: "12px" }}>
+                  <button onClick={() => setDeleteId(null)} style={{ flex: 1, padding: "12px", borderRadius: "12px", border: "1px solid var(--border)", background: "transparent", color: "var(--text)", fontWeight: 600, cursor: "pointer" }}>
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleDelete} 
+                    disabled={deleteLoading}
+                    style={{ flex: 1, padding: "12px", borderRadius: "12px", border: "none", background: "#ef4444", color: "white", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    {deleteLoading ? "Deleting..." : "Confirm Delete"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={{ animation: "fadeIn 0.3s ease" }}>
+                <div style={{ width: "60px", height: "60px", background: "rgba(16,185,129,0.1)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                  <span style={{ fontSize: "24px", color: "#10b981" }}>✓</span>
+                </div>
+                <button style={{ width: "100%", padding: "12px", borderRadius: "12px", border: "1px solid #10b981", background: "rgba(16,185,129,0.1)", color: "#10b981", fontWeight: 700, cursor: "default", fontFamily: "'Sora', sans-serif" }}>
+                  EVENT REMOVED
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
