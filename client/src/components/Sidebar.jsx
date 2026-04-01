@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
+import { Link } from "react-router-dom";
 const links = [
   { to: "/dashboard",  label: "Dashboard",  icon: "⬡", roles: ["admin","manager"] },
   { to: "/events",     label: "Events",      icon: "◈", roles: ["admin","manager"] },
@@ -24,11 +24,13 @@ export default function Sidebar() {
       display: "flex", flexDirection: "column",
       position: "sticky", top: 0, height: "100vh",
     }}>
-      {/* Logo */}
-      <div style={{ padding: "28px 24px 20px", borderBottom: "1px solid var(--border)" }}>
+    {/* Logo */}
+    <div style={{ padding: "28px 24px 20px", borderBottom: "1px solid var(--border)" }}>
+      <Link to="/dashboard" style={{ textDecoration: "none", display: "block", cursor: "pointer" }}>
         <div style={{
           fontFamily: "'Sora', sans-serif",
-          fontSize: "20px", fontWeight: 700,
+          fontSize: "20px", 
+          fontWeight: 700,
           letterSpacing: "2px",
           background: "linear-gradient(135deg, #2563eb, #10b981)",
           WebkitBackgroundClip: "text",
@@ -36,10 +38,17 @@ export default function Sidebar() {
         }}>
           EVENTCORE
         </div>
-        <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "4px", letterSpacing: "1px" }}>
+        <div style={{ 
+          fontSize: "11px", 
+          color: "var(--muted)", 
+          marginTop: "4px", 
+          letterSpacing: "1px",
+          fontWeight: 500 
+        }}>
           ADMIN PLATFORM
         </div>
-      </div>
+      </Link>
+    </div>
 
       {/* Nav */}
       <nav style={{ flex: 1, padding: "16px 12px" }}>

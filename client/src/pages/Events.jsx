@@ -196,7 +196,7 @@ export default function Events() {
       setShowForm(false);setError(""); setForm(emptyForm); fetchEvents();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create event");
-      setTimeout(() => {setError("");} , 4000);
+      setTimeout(() => {setError("");} , 5000);
     }
   };
 
