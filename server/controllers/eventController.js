@@ -92,8 +92,14 @@ export const createEvent = async (req, res) => {
     const newEvent = await Event.create({
       name, location, date, description,
       capacity, status, ticketPrice,
-      createdBy  // ← use from body instead of req.user.id
+      createdBy  
     });
+    if (createdBy) {
+      await EventManager.create({ 
+        managerId: createdBy, 
+        eventId: newEvent.id 
+      });
+    }
 
     res.status(201).json({
       message: "Event created Successfully.",
