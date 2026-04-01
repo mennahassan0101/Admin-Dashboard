@@ -21,21 +21,6 @@ export default function Navbar({ title }) {
       }}>
         {title}
       </h2>
-      <div style={{
-        display: "flex", alignItems: "center", gap: "8px",
-        fontSize: "12px", color: "var(--muted)",
-      }}>
-        Logged in as
-        <span style={{
-          fontWeight: 600, color: "var(--text)",
-          padding: "3px 10px",
-          background: "var(--surface2)",
-          borderRadius: "20px",
-          border: "1px solid var(--border)",
-        }}>
-          {user?.name}
-        </span>
-      </div>
     </header>
   );
 }
