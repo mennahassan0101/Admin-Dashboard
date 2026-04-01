@@ -23,7 +23,7 @@ router.put("/update/:id", VerifyToken, authorizeRoles("admin"), updateEvent);
 router.delete("/delete/:id", VerifyToken, authorizeRoles("admin"), deleteEvent);
 
 // Admin only — manage assignments
-router.post("/:id/assign", VerifyToken, authorizeRoles("admin"), assignManager);
+router.post("/update/:id/assign", VerifyToken, authorizeRoles("admin"), assignManager);
 router.delete("/:id/assign/:managerId", VerifyToken, authorizeRoles("admin"), removeManager);
 router.get("/:id/managers", VerifyToken, authorizeRoles("admin"), getEventManagers);
 

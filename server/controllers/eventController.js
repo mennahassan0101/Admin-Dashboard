@@ -7,10 +7,14 @@ export const getEvents = async (req, res) => {
     let events;
 
     if (role === "admin") {
-      // admin sees ALL events
       events = await Event.findAll({
-        attributes: ["id", "name", "location", "date", "description",
-          "attendees", "capacity", "status", "ticketPrice", "createdBy"]
+        attributes: ["id", "name", "location", "date", "description", "attendees", "capacity", "status", "ticketPrice", "createdBy"],
+        include: [{
+          model: User,
+          as: "assignedManagers", // This must match the alias in your indexing.js/models
+          attributes: ["id", "name"],
+          through: { attributes: [] } // Exclude the join table data
+        }]
       });
     } else {
       // manager sees only ASSIGNED events
