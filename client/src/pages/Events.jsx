@@ -33,7 +33,7 @@ const inputStyle = {
   boxSizing: "border-box",
 };
 
-// ✅ FIXED: Stable component definition outside
+//  Stable component definition outside
 const StyledInput = ({ value, onChange, type = "text", required, placeholder, rows }) => {
   const [focused, setFocused] = useState(false);
   const style = { ...inputStyle, borderColor: focused ? "#2563eb" : "var(--border)", boxShadow: focused ? "0 0 0 3px rgba(37,99,235,0.1)" : "none" };
@@ -47,7 +47,7 @@ const StyledInput = ({ value, onChange, type = "text", required, placeholder, ro
   );
 };
 
-// ✅ FIXED: Now accepts 'managers' as a prop
+// accepts 'managers' as a prop
 const ManagerDropdown = ({ value, onChange, managers }) => (
   <FieldGroup label="Assign to Manager">
     <select value={value} onChange={onChange} style={inputStyle} required>
@@ -59,7 +59,7 @@ const ManagerDropdown = ({ value, onChange, managers }) => (
   </FieldGroup>
 );
 
-// ✅ FIXED: Now accepts 'isAdmin' and 'managers' as props
+//  accepts 'isAdmin' and 'managers' as props
 const FormGrid = ({ formData, setFormData, onSubmit, loading, error, onCancel, submitLabel, isAdmin, managers }) => (
   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
     {error && (
@@ -193,9 +193,10 @@ export default function Events() {
         ...form,
         createdBy: form.assignedTo,  // send assignedTo as createdBy
       });
-      setShowForm(false); setForm(emptyForm); fetchEvents();
+      setShowForm(false);setError(""); setForm(emptyForm); fetchEvents();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create event");
+      setTimeout(() => {setError("");} , 4000);
     }
   };
 
@@ -242,8 +243,8 @@ export default function Events() {
                 onSubmit={handleSubmit} error={error}
                 onCancel={() => { setShowForm(false); setForm(emptyForm); }}
                 submitLabel="Create Event"
-                isAdmin={isAdmin} // ✅ PASSING PROP
-                managers={managers} // ✅ PASSING PROP
+                isAdmin={isAdmin} 
+                managers={managers} 
               />
             </div>
           )}
