@@ -89,10 +89,12 @@ export const createEvent = async (req, res) => {
     if (ev)
       return res.status(400).json({ message: "Event already exists on this date!" });
 
+    const randomAttendees = Math.floor(Math.random() * parseInt(capacity)) + 1;
     const newEvent = await Event.create({
       name, location, date, description,
       capacity, status, ticketPrice,
-      createdBy  
+      createdBy  ,
+      attendees: randomAttendees,
     });
     if (createdBy) {
       await EventManager.create({ 
