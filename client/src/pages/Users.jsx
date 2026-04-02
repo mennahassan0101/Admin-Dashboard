@@ -171,7 +171,13 @@ export default function Users() {
                 ))}
                 <div>
                   <FieldLabel>ROLE</FieldLabel>
-                  <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} style={glassInput}>
+                  <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}               style={{
+                    ...glassInput, // This applies your dark glass style
+                    background: "rgba(9, 9, 11, 0.9)", // Ensures the dropdown list itself is dark
+                    color: "white",
+                    appearance: "none", // Removes default browser styling
+                    cursor: "pointer"
+                  }}>
                     <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
                   </select>
