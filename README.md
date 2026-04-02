@@ -60,7 +60,7 @@ Admin_Dashboard/
     ├── middleware/           # Auth middleware
     ├── models/               # Sequelize models
     ├── routes/               # API routes
-    └── __tests__/            # Test files
+   
 ```
 
 ---
