@@ -268,7 +268,7 @@ export default function Events() {
     try {
       await API.delete(`/events/delete/${deleteId}`);
       setIsDeleted(true);
-      setTimeout(() => { setDeleteId(null); setIsDeleted(false); fetchEvents(); }, 2000);
+      setTimeout(() => { setDeleteId(null); setIsDeleted(false); fetchEvents(); }, 1000);
     } catch (err) {
       setError("Failed to delete event"); setDeleteId(null);
     } finally { setDeleteLoading(false); }
